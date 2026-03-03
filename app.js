@@ -6,6 +6,25 @@
 (function () {
     'use strict';
 
+    function showToastSafe(msg, type) {
+        if (typeof window.showToast === 'function') window.showToast(msg, type);
+        else alert(msg);
+    }
+
+    function setButtonLoading(btn, loading) {
+        if (!btn) return;
+        if (loading) {
+            btn.dataset.originalText = btn.textContent || '';
+            btn.disabled = true;
+            btn.classList.add('btn-loading', 'btn-loading-text');
+            btn.textContent = 'Sincronizando...';
+        } else {
+            btn.disabled = false;
+            btn.classList.remove('btn-loading', 'btn-loading-text');
+            btn.textContent = (btn.dataset.originalText != null && btn.dataset.originalText !== '') ? btn.dataset.originalText : 'Guardar';
+        }
+    }
+
     // --- Referencias DOM ---
     var adminNameEl = document.getElementById('adminName');
     var headerTitleEl = document.getElementById('headerTitle');
@@ -26,9 +45,12 @@
     var ordenPendientePago = null;
     var modalMetodoPago = document.getElementById('modalMetodoPago');
     var btnCancelarMetodoPago = document.getElementById('btnCancelarMetodoPago');
+    var btnCerrarModalMetodoPago = document.getElementById('btnCerrarModalMetodoPago');
 
     // Menú
-    var menuBody = document.getElementById('menuBody');
+    var menuFilterPills = document.getElementById('menuFilterPills');
+    var menuCardsGrid = document.getElementById('menuCardsGrid');
+    var menuEmptyState = document.getElementById('menuEmptyState');
     var btnAgregarPlatillo = document.getElementById('btnAgregarPlatillo');
     var modalPlatillo = document.getElementById('modalPlatillo');
     var platilloNombre = document.getElementById('platilloNombre');
@@ -38,7 +60,7 @@
     var btnCancelarPlatillo = document.getElementById('btnCancelarPlatillo');
 
     // Meseros
-    var meserosBody = document.getElementById('meserosBody');
+    var meserosGrid = document.getElementById('meserosGrid');
     var btnCrearMesero = document.getElementById('btnCrearMesero');
     var modalMesero = document.getElementById('modalMesero');
     var meseroNombre = document.getElementById('meseroNombre');
@@ -55,14 +77,20 @@
     var gastoMetodoPago = document.getElementById('gastoMetodoPago');
     var btnRegistrarGasto = document.getElementById('btnRegistrarGasto');
     var gastoOk = document.getElementById('gastoOk');
+    var btnCerrarModalPlatillo = document.getElementById('btnCerrarModalPlatillo');
+    var btnCerrarModalMesero = document.getElementById('btnCerrarModalMesero');
 
     // Reportes
     var reporteDesde = document.getElementById('reporteDesde');
     var reporteHasta = document.getElementById('reporteHasta');
     var btnFiltrarReporte = document.getElementById('btnFiltrarReporte');
     var btnExportarPdf = document.getElementById('btnExportarPdf');
-    var reporteTotalVentas = document.getElementById('reporteTotalVentas');
     var reportesBody = document.getElementById('reportesBody');
+    var reporteBalanceFoot = document.getElementById('reporteBalanceFoot');
+    var reporteBalanceNeto = document.getElementById('reporteBalanceNeto');
+    var reporteQuickHoy = document.getElementById('reporteQuickHoy');
+    var reporteQuickSemana = document.getElementById('reporteQuickSemana');
+    var reporteQuickMes = document.getElementById('reporteQuickMes');
 
     var titulosSeccion = {
         dashboard: 'Dashboard',
@@ -111,6 +139,8 @@
             var id = a.getAttribute('data-section');
             if (id) {
                 mostrarSeccion(id);
+                var sidebarToggle = document.getElementById('sidebar-toggle');
+                if (sidebarToggle && sidebarToggle.checked) sidebarToggle.checked = false;
                 if (id === 'pedidos' && !pedidosInicializado) {
                     iniciarSeccionPedidos();
                     pedidosInicializado = true;
@@ -361,11 +391,11 @@
                 if (el) el.className = className;
             }
 
-            set('rsTotalIngresos', '$' + totalIngresos.toFixed(2));
-            set('rsTotalGastos', '$' + totalGastos.toFixed(2));
-            set('rsGananciaNeta', '$' + gananciaNeta.toFixed(2));
-            set('rsPromedioDia', '$' + promedioDia.toFixed(2));
-            set('rsTicketPromedio', '$' + ticketPromedio.toFixed(2));
+            set('rsTotalIngresos', formatearDinero(totalIngresos));
+            set('rsTotalGastos', formatearDinero(totalGastos));
+            set('rsGananciaNeta', formatearDinero(gananciaNeta));
+            set('rsPromedioDia', formatearDinero(promedioDia));
+            set('rsTicketPromedio', formatearDinero(ticketPromedio));
             set('rsHoraPico', horaPico || '—');
             set('rsHoraMenor', horaMenor);
             set('rsRangoActivo', rangoActivo);
@@ -376,10 +406,10 @@
             set('rsMesaActiva', mesaMasActiva);
             set('rsPromMesa', String(promMesa));
 
-            set('rsComparativaActual', '$' + totalIngresos.toFixed(2));
-            set('rsComparativaAnterior', '$' + totalSemanaAnterior.toFixed(2));
+            set('rsComparativaActual', formatearDinero(totalIngresos));
+            set('rsComparativaAnterior', formatearDinero(totalSemanaAnterior));
             var diff = totalIngresos - totalSemanaAnterior;
-            var diffStr = (diff >= 0 ? '+' : '') + ' $' + Math.abs(diff).toFixed(2);
+            var diffStr = (diff >= 0 ? '+' : '') + ' ' + formatearDinero(Math.abs(diff));
             set('rsComparativaDif', diffStr);
             setClass('rsComparativaDif', 'reporte-metrica-principal ' + (diff >= 0 ? 'reporte-positivo' : 'reporte-negativo'));
             var pctVal = totalSemanaAnterior !== 0 ? ((totalIngresos - totalSemanaAnterior) / totalSemanaAnterior * 100) : null;
@@ -397,8 +427,8 @@
             set('rsMetodoTarjeta', metodoCount.tarjeta + ' órdenes (' + pctT + '%)');
             set('rsMetodoTransferencia', metodoCount.transferencia + ' órdenes (' + pctTr + '%)');
 
-            set('kpiIngresosSemana', '$' + totalIngresos.toFixed(2));
-            set('kpiGananciaSemana', '$' + gananciaNeta.toFixed(2));
+            set('kpiIngresosSemana', formatearDinero(totalIngresos));
+            set('kpiGananciaSemana', formatearDinero(gananciaNeta));
             set('kpiOrdenesSemana', String(totalOrdenes));
 
             var rsTop3 = document.getElementById('rsTop3Platillos');
@@ -443,7 +473,7 @@
             if (contenido) contenido.style.display = 'block';
         }).catch(function (err) {
             console.error('Error generando reporte semanal:', err);
-            alert('No se pudo generar el reporte.');
+            showToastSafe('No se pudo generar el reporte.', 'error');
         });
     }
 
@@ -467,7 +497,7 @@
         var desde = document.getElementById(desdeId) && document.getElementById(desdeId).value;
         var hasta = document.getElementById(hastaId) && document.getElementById(hastaId).value;
         if (!desde || !hasta) {
-            alert('Selecciona las fechas Desde y Hasta.');
+            showToastSafe('Selecciona las fechas Desde y Hasta.', 'info');
             return;
         }
         var tsDesde = firebase.firestore.Timestamp.fromDate(new Date(desde + 'T00:00:00'));
@@ -489,7 +519,7 @@
         var desde = document.getElementById(desdeId) && document.getElementById(desdeId).value;
         var hasta = document.getElementById(hastaId) && document.getElementById(hastaId).value;
         if (!desde || !hasta) {
-            alert('Selecciona las fechas Desde y Hasta.');
+            showToastSafe('Selecciona las fechas Desde y Hasta.', 'info');
             return;
         }
         var tsDesde = firebase.firestore.Timestamp.fromDate(new Date(desde + 'T00:00:00'));
@@ -499,7 +529,7 @@
             .then(function (snap) {
                 var total = snap.size;
                 if (total === 0) {
-                    alert('No hay registros en ese período.');
+                    showToastSafe('No hay registros en ese período.', 'info');
                     return;
                 }
                 var desdeStr = new Date(desde + 'T00:00:00').toLocaleDateString('es');
@@ -514,7 +544,7 @@
                 var msg3 = 'Para confirmar la eliminación escribe exactamente la palabra: CONFIRMAR';
                 var escrito = prompt(msg3);
                 if (escrito !== 'CONFIRMAR') {
-                    alert('Texto incorrecto. Operación cancelada.');
+                    showToastSafe('Texto incorrecto. Operación cancelada.', 'error');
                     return;
                 }
                 var docs = [];
@@ -527,7 +557,7 @@
                         if (committed > 0) {
                             var countEl = document.getElementById(countId);
                             if (countEl) countEl.textContent = '0 registros encontrados en este período';
-                            alert(total + ' registros eliminados correctamente');
+                            showToastSafe(total + ' registros eliminados correctamente', 'success');
                         }
                         return;
                     }
@@ -539,14 +569,14 @@
                         runBatches(end);
                     }).catch(function (err) {
                         console.error('Error eliminando:', err);
-                        alert('Error al eliminar algunos registros.');
+                        showToastSafe('Error al eliminar algunos registros.', 'error');
                     });
                 }
                 runBatches(0);
             })
             .catch(function (err) {
                 console.error('Error al contar:', err);
-                alert('No se pudo verificar el período.');
+                showToastSafe('No se pudo verificar el período.', 'error');
             });
     }
 
@@ -586,21 +616,115 @@
         });
     }
     if (btnLogout) btnLogout.addEventListener('click', cerrarSesion);
+    var btnLogoutSidebar = document.getElementById('btnLogoutSidebar');
+    if (btnLogoutSidebar) btnLogoutSidebar.addEventListener('click', cerrarSesion);
 
-    // --- Nombre del admin ---
+    // --- Configuración del Restaurante (Nombre y Moneda) ---
+    var configuracionRestaurante = { nombre: 'Mi Restaurante', moneda: 'USD' }; // Valores por defecto
+
+    function cargarConfiguracionRestaurante() {
+        db.collection('configuracion').doc('restaurante').get().then(function (doc) {
+            if (doc.exists) {
+                configuracionRestaurante = doc.data() || configuracionRestaurante;
+            }
+            var inputNombre = document.getElementById('restauranteNombre');
+            var selectMoneda = document.getElementById('restauranteMoneda');
+            if (inputNombre) inputNombre.value = configuracionRestaurante.nombre || '';
+            if (selectMoneda) selectMoneda.value = configuracionRestaurante.moneda || 'USD';
+            actualizarHeaderConMarca();
+        }).catch(function (error) {
+            console.error('Error cargando configuración: ', error);
+        });
+    }
+
+    function guardarConfiguracionRestaurante() {
+        var inputNombre = document.getElementById('restauranteNombre');
+        var selectMoneda = document.getElementById('restauranteMoneda');
+        var nombre = inputNombre ? inputNombre.value.trim() : '';
+        var moneda = selectMoneda ? selectMoneda.value : 'USD';
+
+        if (!nombre) {
+            showToastSafe('El nombre del restaurante no puede estar vacío.', 'info');
+            return;
+        }
+
+        var nuevaConfig = { nombre: nombre, moneda: moneda };
+
+        db.collection('configuracion').doc('restaurante').set(nuevaConfig, { merge: true })
+            .then(function () {
+                configuracionRestaurante = nuevaConfig;
+                var mensaje = document.getElementById('configRestauranteMensaje');
+                if (mensaje) {
+                    mensaje.style.display = 'inline';
+                    setTimeout(function () { mensaje.style.display = 'none'; }, 2000);
+                }
+                actualizarHeaderConMarca();
+                showToastSafe('Configuración guardada.', 'success');
+            })
+            .catch(function (error) {
+                console.error('Error guardando configuración: ', error);
+                showToastSafe('Error al guardar.', 'error');
+            });
+    }
+
+    function actualizarHeaderConMarca() {
+        var headerTitle = document.getElementById('headerTitle');
+        // De momento solo dejamos el hook para usar la marca en el futuro.
+        // if (headerTitle && configuracionRestaurante.nombre) { ... }
+    }
+
+    // --- Nombre del admin + carga de configuración global ---
     auth.onAuthStateChanged(function (user) {
         if (user && adminNameEl) {
+            var greetingEl = document.getElementById('headerGreeting');
+
+            function actualizarSaludo() {
+                if (!greetingEl || !adminNameEl.textContent) return;
+                var hour = new Date().getHours();
+                var greeting = 'Bienvenido,';
+                if (hour < 12) {
+                    greeting = 'Buenos días,';
+                } else if (hour < 18) {
+                    greeting = 'Buenas tardes,';
+                } else {
+                    greeting = 'Buenas noches,';
+                }
+                var firstName = adminNameEl.textContent.split(' ')[0];
+                greetingEl.textContent = greeting + ' ' + firstName;
+            }
+
             db.collection('usuarios').doc(user.uid).get().then(function (doc) {
                 if (doc.exists && doc.data().nombre) {
                     adminNameEl.textContent = doc.data().nombre;
                 } else {
                     adminNameEl.textContent = user.email || 'Admin';
                 }
+                actualizarSaludo();
             }).catch(function () {
                 adminNameEl.textContent = user.email || 'Admin';
+                actualizarSaludo();
             });
+
+            // Cargar la configuración del restaurante (nombre y moneda)
+            cargarConfiguracionRestaurante();
         }
     });
+
+    // --- Función global de formateo de dinero ---
+    function formatearDinero(valor) {
+        var moneda = configuracionRestaurante && configuracionRestaurante.moneda ? configuracionRestaurante.moneda : 'USD';
+        var simbolo;
+        if (moneda === 'EUR') simbolo = '€';
+        else simbolo = '$'; // USD, MXN, COP usan $
+        var num = Number(valor) || 0;
+        return simbolo + num.toFixed(2);
+    }
+
+    // Botón para guardar configuración de restaurante
+    var btnGuardarConfigRestaurante = document.getElementById('btnGuardarConfigRestaurante');
+    if (btnGuardarConfigRestaurante) {
+        btnGuardarConfigRestaurante.addEventListener('click', guardarConfiguracionRestaurante);
+    }
 
     // --- Helpers fecha (inicio/fin del día) ---
     function inicioDelDia(d) {
@@ -618,6 +742,15 @@
     }
 
     // --- Dashboard: ventas, gastos, ganancia, órdenes activas (tiempo real) ---
+    function aplicarTransicionValor(el) {
+        if (!el) return;
+        el.classList.add('card-value-updated');
+        window.clearTimeout(el._cardValueTimeout);
+        el._cardValueTimeout = window.setTimeout(function () {
+            el.classList.remove('card-value-updated');
+        }, 350);
+    }
+
     function escucharDashboard() {
         var hoyInicio = firebase.firestore.Timestamp.fromDate(inicioDelDia(hoy()));
         var hoyFin = firebase.firestore.Timestamp.fromDate(finDelDia(hoy()));
@@ -628,7 +761,10 @@
                 snap.forEach(function (d) {
                     total += (d.data().total || 0);
                 });
-                if (ventasDiaEl) ventasDiaEl.textContent = '$' + total.toFixed(2);
+                if (ventasDiaEl) {
+                    ventasDiaEl.textContent = formatearDinero(total);
+                    aplicarTransicionValor(ventasDiaEl);
+                }
                 window._ventasDia = total;
                 actualizarGananciaDashboard();
             });
@@ -639,7 +775,10 @@
                 snap.forEach(function (d) {
                     total += (d.data().monto || 0);
                 });
-                if (gastosDiaEl) gastosDiaEl.textContent = '$' + total.toFixed(2);
+                if (gastosDiaEl) {
+                    gastosDiaEl.textContent = formatearDinero(total);
+                    aplicarTransicionValor(gastosDiaEl);
+                }
                 window._gastosDia = total;
                 actualizarGananciaDashboard();
             });
@@ -650,7 +789,10 @@
                 var est = (d.data().estado || '').toLowerCase();
                 if (est !== 'pagada' && est !== 'cancelada') activas++;
             });
-            if (ordenesActivasEl) ordenesActivasEl.textContent = activas;
+            if (ordenesActivasEl) {
+                ordenesActivasEl.textContent = activas;
+                aplicarTransicionValor(ordenesActivasEl);
+            }
         });
     }
 
@@ -693,7 +835,7 @@
 
             function setEl(id, val) {
                 var el = document.getElementById(id);
-                if (el) el.textContent = '$' + Number(val).toFixed(2);
+            if (el) el.textContent = formatearDinero(Number(val));
             }
             setEl('resumenSemanaIngresos', totalVentasSemana);
             setEl('resumenSemanaGastos', totalGastosSemana);
@@ -756,6 +898,11 @@
                 graficaSemanaChart = null;
             }
             var ctx = canvas.getContext('2d');
+            var h = 300;
+            var gradienteIngresos = ctx.createLinearGradient(0, 0, 0, h);
+            gradienteIngresos.addColorStop(0, 'rgba(212, 175, 55, 0.35)');
+            gradienteIngresos.addColorStop(0.5, 'rgba(212, 175, 55, 0.12)');
+            gradienteIngresos.addColorStop(1, 'rgba(212, 175, 55, 0)');
             graficaSemanaChart = new Chart(ctx, {
                 type: 'line',
                 data: {
@@ -764,23 +911,23 @@
                         {
                             label: 'Ingresos',
                             data: ingresosPorDia,
-                            borderColor: '#1565C0',
-                            backgroundColor: 'rgba(21,101,192,0.08)',
+                            borderColor: '#D4AF37',
+                            backgroundColor: gradienteIngresos,
                             fill: true,
-                            tension: 0.2,
-                            pointBackgroundColor: '#1565C0',
-                            pointBorderColor: '#FFFFFF',
+                            tension: 0.3,
+                            pointBackgroundColor: '#D4AF37',
+                            pointBorderColor: 'rgba(15, 23, 42, 0.9)',
                             pointBorderWidth: 2
                         },
                         {
                             label: 'Gastos',
                             data: gastosPorDia,
-                            borderColor: '#C62828',
-                            backgroundColor: 'rgba(198,40,40,0.06)',
+                            borderColor: 'rgba(239, 68, 68, 0.9)',
+                            backgroundColor: 'rgba(239, 68, 68, 0.08)',
                             fill: true,
-                            tension: 0.2,
-                            pointBackgroundColor: '#C62828',
-                            pointBorderColor: '#FFFFFF',
+                            tension: 0.3,
+                            pointBackgroundColor: 'rgba(239, 68, 68, 0.9)',
+                            pointBorderColor: 'rgba(15, 23, 42, 0.9)',
                             pointBorderWidth: 2
                         }
                     ]
@@ -792,19 +939,19 @@
                         legend: {
                             display: true,
                             position: 'top',
-                            labels: { color: '#1A2744' }
+                            labels: { color: '#94a3b8' }
                         }
                     },
                     scales: {
                         x: {
-                            grid: { color: 'rgba(0,0,0,0.06)' },
-                            ticks: { color: '#546E7A' },
-                            border: { color: '#D6E0F0' }
+                            grid: { display: false },
+                            ticks: { color: '#94a3b8' },
+                            border: { display: false }
                         },
                         y: {
-                            grid: { color: 'rgba(0,0,0,0.06)' },
-                            ticks: { color: '#546E7A' },
-                            border: { color: '#D6E0F0' }
+                            grid: { display: false },
+                            ticks: { color: '#94a3b8' },
+                            border: { display: false }
                         }
                     }
                 }
@@ -818,7 +965,10 @@
         var v = window._ventasDia || 0;
         var g = window._gastosDia || 0;
         var gan = Math.max(0, v - g);
-        if (gananciaNetaEl) gananciaNetaEl.textContent = '$' + gan.toFixed(2);
+        if (gananciaNetaEl) {
+            gananciaNetaEl.textContent = formatearDinero(gan);
+            aplicarTransicionValor(gananciaNetaEl);
+        }
     }
 
     // --- Órdenes en vivo ---
@@ -830,11 +980,27 @@
         return 'estado-pendiente';
     }
 
+    function abrirModalMetodoPago() {
+        if (!modalMetodoPago) return;
+        modalMetodoPago.classList.add('open');
+        modalMetodoPago.style.display = 'flex';
+    }
+
+    function cerrarModalMetodoPago() {
+        if (!modalMetodoPago) return;
+        modalMetodoPago.classList.remove('open');
+        setTimeout(function () {
+            if (!modalMetodoPago.classList.contains('open')) {
+                modalMetodoPago.style.display = 'none';
+            }
+        }, 300);
+    }
+
     function cambiarEstadoOrden(id, nuevoEstado, metodoPago) {
         var esPagada = (nuevoEstado || '').toLowerCase() === 'pagada';
         if (esPagada && !metodoPago) {
             ordenPendientePago = id;
-            if (modalMetodoPago) modalMetodoPago.style.display = 'flex';
+            abrirModalMetodoPago();
             return;
         }
         db.collection('ordenes').doc(id).get().then(function (doc) {
@@ -865,7 +1031,7 @@
         modalMetodoPago.querySelectorAll('.btn-metodo-pago').forEach(function (btn) {
             btn.addEventListener('click', function () {
                 var metodo = this.getAttribute('data-metodo') || '';
-                modalMetodoPago.style.display = 'none';
+                cerrarModalMetodoPago();
                 if (ordenPendientePago) {
                     var id = ordenPendientePago;
                     ordenPendientePago = null;
@@ -876,66 +1042,141 @@
     }
     if (btnCancelarMetodoPago) {
         btnCancelarMetodoPago.addEventListener('click', function () {
-            if (modalMetodoPago) modalMetodoPago.style.display = 'none';
+            cerrarModalMetodoPago();
+            ordenPendientePago = null;
+        });
+    }
+    if (btnCerrarModalMetodoPago) {
+        btnCerrarModalMetodoPago.addEventListener('click', function () {
+            cerrarModalMetodoPago();
             ordenPendientePago = null;
         });
     }
 
+    function estadoToBadgeText(estado) {
+        var e = (estado || '').toLowerCase();
+        if (e === 'pagada') return 'Pagada';
+        if (e === 'servido' || e === 'servida') return 'Listo';
+        if (e === 'preparando') return 'Preparando';
+        return 'Pendiente';
+    }
+
     function renderOrdenes(snap) {
         if (!ordenesBody) return;
-        var rows = [];
+        var cards = [];
         if (snap.empty) {
-            rows.push('<tr><td colspan="6" class="msg-empty">No hay órdenes.</td></tr>');
+            cards.push('<div class="msg-empty order-msg-empty"><span class="order-msg-empty-spinner" aria-hidden="true"></span>Monitoreando pedidos en tiempo real...</div>');
         } else {
+            var now = Date.now();
             snap.forEach(function (d) {
                 var data = d.data();
                 var id = d.id;
-                var mesa = data.mesa || '-';
-                var mesero = data.meseroNombre || '-';
-                var platillosHtml = '';
-                if (Array.isArray(data.platillos) && data.platillos.length > 0) {
-                    var items = data.platillos.map(function (p) {
-                        var n = (p && p.nombre) ? p.nombre : (typeof p === 'string' ? p : '');
-                        var q = (p && p.cantidad) ? ' x' + p.cantidad : '';
-                        return '<li>' + escapeHtml(n + q) + '</li>';
-                    });
-                    platillosHtml = '<ul style="margin:0;padding-left:1.1em;list-style:disc;">' + items.join('') + '</ul>';
-                } else {
-                    platillosHtml = '<span>-</span>';
-                }
-                var total;
-                if (data.total != null) {
-                    total = '$' + Number(data.total).toFixed(2);
-                } else {
-                    total = '-';
-                }
+                var mesa = data.mesa || '—';
+                var mesero = data.meseroNombre || '—';
                 var estado = data.estado || 'pendiente';
-                var clase = estadoToClass(estado);
-                var esPagadaOCancelada = estado.toLowerCase() === 'pagada' || estado.toLowerCase() === 'cancelada';
-                var flujoHtml = '';
-                if (!esPagadaOCancelada) {
-                    if (estado.toLowerCase() !== 'preparando') {
-                        flujoHtml += '<button type="button" class="btn-sm btn-estado-preparando" data-id="' + id + '" data-estado="preparando">Preparando</button>';
-                    }
-                    if (estado.toLowerCase() !== 'servido' && estado.toLowerCase() !== 'servida') {
-                        flujoHtml += '<button type="button" class="btn-sm btn-estado-servido" data-id="' + id + '" data-estado="servido">Servido</button>';
-                    }
-                    flujoHtml += '<button type="button" class="btn-sm btn-estado-pagada" data-id="' + id + '" data-estado="pagada">Pagada</button>';
+                
+                // CORRECCIÓN: Normalización de estados
+                var estadoRaw = (String(estado)).trim().toLowerCase();
+                var estadoNormalizado = estadoRaw.replace(/\s+/g, '-');
+                
+                // Mapeo correcto de estados
+                if (estadoNormalizado === 'servido' || estadoNormalizado === 'servida') {
+                    estadoNormalizado = 'listo';
                 }
-                var auxHtml = '<button type="button" class="btn-sm btn-whatsapp" data-id="' + id + '" title="Enviar por WhatsApp">WhatsApp</button>';
-                auxHtml += '<button type="button" class="btn-sm btn-print" data-id="' + id + '" title="Imprimir ticket">Imprimir</button>';
-                auxHtml += '<button type="button" class="btn-sm btn-danger eliminar-orden" data-id="' + id + '" title="Eliminar orden">Eliminar</button>';
-                var opciones = '<div class="orden-acciones"><div class="orden-acciones-flujo">' + flujoHtml + '</div><div class="orden-acciones-aux">' + auxHtml + '</div></div>';
-                rows.push(
-                    '<tr><td data-label="Mesa">' + escapeHtml(mesa) + '</td><td data-label="Mesero">' + escapeHtml(mesero) + '</td><td data-label="Platillos">' + platillosHtml + '</td><td data-label="Total">' + total + '</td><td data-label="Estado"><span class="estado-badge ' + clase + '">' + escapeHtml(estado) + '</span></td><td data-label="Acciones">' + opciones + '</td></tr>'
+                
+                // La clase CSS debe ser EXACTAMENTE: status-pendiente, status-preparando, status-listo, status-pagada
+                var estadoClase = 'status-' + estadoNormalizado;
+                
+                // Badge text para mostrar
+                var badgeText = '';
+                if (estadoRaw === 'pagada') badgeText = 'Pagada';
+                else if (estadoRaw === 'servido' || estadoRaw === 'servida' || estadoNormalizado === 'listo') badgeText = 'Listo';
+                else if (estadoRaw === 'preparando') badgeText = 'Preparando';
+                else badgeText = 'Pendiente';
+                
+                // Badge class para el círculo de color
+                var badgeClass = '';
+                if (estadoRaw === 'pagada') badgeClass = 'estado-pagada';
+                else if (estadoRaw === 'servido' || estadoRaw === 'servida' || estadoNormalizado === 'listo') badgeClass = 'estado-servido';
+                else if (estadoRaw === 'preparando') badgeClass = 'estado-preparando';
+                else badgeClass = 'estado-pendiente';
+    
+                // Cálculo de tiempo
+                var elapsedMin = 0;
+                var timerText = '—';
+                if (data.timestamp && data.timestamp.toDate) {
+                    var created = data.timestamp.toDate().getTime();
+                    elapsedMin = Math.floor((now - created) / 60000);
+                    if (elapsedMin < 60) {
+                        timerText = elapsedMin + ' min';
+                    } else {
+                        var h = Math.floor(elapsedMin / 60);
+                        var m = elapsedMin % 60;
+                        timerText = h + ' h ' + m + ' min';
+                    }
+                }
+    
+                var urgentClass = (estadoRaw !== 'pagada' && estadoRaw !== 'cancelada' && elapsedMin >= 15) ? ' order-urgent' : '';
+    
+                // Items HTML
+                var itemsHtml = '';
+                if (Array.isArray(data.platillos) && data.platillos.length > 0) {
+                    itemsHtml = data.platillos.map(function (p) {
+                        var nombre = (p && p.nombre) ? p.nombre : (typeof p === 'string' ? p : '—');
+                        var cant = (p && p.cantidad) ? p.cantidad : 1;
+                        return '<li class="order-item"><span class="order-item-qty">' + cant + '</span><span class="order-item-name">' + escapeHtml(nombre) + '</span></li>';
+                    }).join('');
+                } else {
+                    itemsHtml = '<li class="order-item"><span class="order-item-qty">0</span><span class="order-item-name">—</span></li>';
+                }
+    
+                var totalStr = (data.total != null) ? formatearDinero(Number(data.total)) : '—';
+    
+                // Botones de acción
+                var esPagadaOCancelada = estadoRaw === 'pagada' || estadoRaw === 'cancelada';
+                var btnsHtml = '';
+                if (!esPagadaOCancelada) {
+                    if (estadoRaw !== 'preparando') {
+                        btnsHtml += '<button type="button" class="order-btn-icon order-btn-preparando" data-id="' + id + '" data-estado="preparando" title="Preparando"><svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M12 6v6h4.5m4.5 0a9 9 0 11-18 0 9 9 0 0118 0z"/></svg></button>';
+                    }
+                    btnsHtml += '<button type="button" class="order-btn-icon order-btn-servido" data-id="' + id + '" data-estado="servido" title="Marcar servido"><svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M4.5 12.75l6 6 9-13.5"/></svg></button>';
+                    btnsHtml += '<button type="button" class="order-btn-icon order-btn-pagada" data-id="' + id + '" data-estado="pagada" title="Marcar pagada"><svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M2.25 18.75a60.07 60.07 0 0115.797 2.101c.727.198 1.453-.342 1.453-1.096V18.75M3.75 4.5v.75A.75.75 0 013 6h-.75m0 0v-.375c0-.621.504-1.125 1.125-1.125H20.25M2.25 6v9m18-10.5v.75c0 .414.336.75.75.75h.75m-1.5-1.5h.375c.621 0 1.125.504 1.125 1.125v9.75c0 .621-.504 1.125-1.125 1.125h-.375m1.5-1.5h1.125c.621 0 1.129.504 1.09 1.124a7.627 7.627 0 01-1.09 3.986 4.648 4.648 0 01-3.986-3.986 7.625 7.625 0 011.09-5.235M9 10.5h.375M9 9h3.621a2.25 2.25 0 011.06 4.31 2.25 2.25 0 01.95 2.19M9 15h3.621a2.25 2.25 0 011.06 4.31 2.25 2.25 0 01.95-2.19M9 12h.375"/></svg></button>';
+                    btnsHtml += '<button type="button" class="order-btn-icon btn-whatsapp" data-id="' + id + '" title="Enviar por WhatsApp"><svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M8.625 9.75a.375.375 0 11-.75 0 .375.375 0 01.75 0zm0 0H8.25m4.125 0a.375.375 0 11-.75 0 .375.375 0 01.75 0zm0 0H12m4.125 0a.375.375 0 11-.75 0 .375.375 0 01.75 0zm0 0h-.375m-13.5 3.01c0 1.6 1.123 2.994 2.707 3.227 1.087.16 2.185.283 2.293.283.107 0 1.21-.123 2.29-.283 1.585-.233 2.708-1.626 2.708-3.228V12m0 0c0 1.6-1.123 2.994-2.707 3.227-1.087.16-2.185.283-2.293.283-.107 0-1.21-.123-2.29-.283-1.585-.233-2.708-1.626-2.708-3.228V6.741c0-1.602 1.123-2.994 2.708-3.227C13.79 3.354 14.884 3.234 16 3.234s2.21.12 2.293.283c1.585.233 2.708 1.626 2.708 3.228v5.018z"/></svg></button>';
+                }
+                btnsHtml += '<button type="button" class="order-btn-icon order-btn-print" data-id="' + id + '" title="Imprimir ticket"><svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M6.72 13.829c-.24.03-.48.062-.72.096m.72-.096a42.415 42.415 0 0110.56 0m-10.56 0L6.34 18m10.94-4.171c.24.03.48.062.72.096m-.72-.096L17.66 18m0 0l.229 2.523a1.125 1.125 0 01-1.12 1.227 7.502 7.502 0 01-7.538-1.227M17.66 18l-.229-2.523a1.125 1.125 0 00-1.12-1.227 7.502 7.502 0 00-7.538 1.227M12 15.75h3m-3.75 3.75h3m-6.75 3.75h3m-3.75 3.75h3m-6.75 3.75h3m-3.75 3.75h3"/></svg></button>';
+                btnsHtml += '<button type="button" class="order-btn-icon order-btn-danger eliminar-orden" data-id="' + id + '" title="Eliminar orden"><svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M14.74 9l-.346 9m-4.788 0L9.26 9m9.968-3.21c.342.052.682.107 1.022.166m-1.022-.165L18.16 19.673a2.25 2.25 0 01-2.244 2.077H8.084a2.25 2.25 0 01-2.244-2.077L4.772 5.79m14.456 0a48.108 48.108 0 00-3.478-.397m-12 .562c.34-.059.68-.114 1.022-.165m0 0a48.11 48.11 0 013.478-.397m7.5 0v-.916c0-1.18-.91-2.164-2.09-2.201a51.964 51.964 0 00-3.32 0c-1.18.037-2.09 1.022-2.09 2.201v.916m7.5 0a48.667 48.667 0 00-7.5 0"/></svg></button>';
+    
+                // IMPORTANTE: La clase 'estadoClase' se aplica directamente al div principal
+                cards.push(
+                    '<div class="order-card ' + estadoClase + urgentClass + '" data-id="' + id + '">' +
+                    '<div class="order-card-header">' +
+                    '<span class="order-card-mesa">Mesa ' + escapeHtml(mesa) + '</span>' +
+                    '<span class="order-card-badge ' + badgeClass + '">' + escapeHtml(badgeText) + '</span>' +
+                    '</div>' +
+                    '<div class="order-card-body">' +
+                    '<div class="order-card-mesero">' + escapeHtml(mesero) + '</div>' +
+                    '<ul class="order-items">' + itemsHtml + '</ul>' +
+                    '<div class="order-card-total">' + totalStr + '</div>' +
+                    '</div>' +
+                    '<div class="order-card-footer">' +
+                    '<span class="order-timer">' + timerText + '</span>' +
+                    '<div class="order-actions">' + btnsHtml + '</div>' +
+                    '</div>' +
+                    '</div>'
                 );
             });
         }
-        ordenesBody.innerHTML = rows.join('');
-        ordenesBody.querySelectorAll('[data-id][data-estado]').forEach(function (btn) {
-            btn.addEventListener('click', function () {
-                cambiarEstadoOrden(btn.getAttribute('data-id'), btn.getAttribute('data-estado'));
-            });
+        ordenesBody.innerHTML = cards.join('');
+    
+        // Event listeners para botones...
+        ordenesBody.querySelectorAll('.order-btn-preparando[data-id], .order-btn-servido[data-id], .order-btn-pagada[data-id]').forEach(function (btn) {
+            var id = btn.getAttribute('data-id');
+            var estado = btn.getAttribute('data-estado');
+            if (id && estado) {
+                btn.addEventListener('click', function () {
+                    cambiarEstadoOrden(id, estado);
+                });
+            }
         });
         ordenesBody.querySelectorAll('.btn-whatsapp[data-id]').forEach(function (btn) {
             btn.addEventListener('click', function () {
@@ -944,12 +1185,12 @@
                 }
             });
         });
-        ordenesBody.querySelectorAll('.btn-print[data-id]').forEach(function (btn) {
+        ordenesBody.querySelectorAll('.order-btn-print[data-id]').forEach(function (btn) {
             btn.addEventListener('click', function () {
                 if (typeof window.prepararTicket === 'function') {
                     window.prepararTicket(btn.getAttribute('data-id'));
                 } else {
-                    alert('El módulo de impresión no está disponible.\nRecarga la página e intenta de nuevo.');
+                    showToastSafe('El módulo de impresión no está disponible.\nRecarga la página e intenta de nuevo.', 'error');
                 }
             });
         });
@@ -959,7 +1200,7 @@
                 if (!confirm('¿Eliminar esta orden permanentemente? Esta acción no se puede deshacer.')) return;
                 db.collection('ordenes').doc(id).delete().catch(function (err) {
                     console.error('Error al eliminar orden:', err);
-                    alert('No se pudo eliminar la orden.');
+                    showToastSafe('No se pudo eliminar la orden.', 'error');
                 });
             });
         });
@@ -1028,7 +1269,7 @@
         ordenesConocidas = new Set(idsActuales);
         aplicarFiltroOrdenes();
     }, function (err) {
-        if (ordenesBody) ordenesBody.innerHTML = '<tr><td colspan="6" class="msg-empty">Error al cargar órdenes.</td></tr>';
+        if (ordenesBody) ordenesBody.innerHTML = '<div class="msg-empty order-msg-empty">Error al cargar órdenes.</div>';
         console.error(err);
     });
 
@@ -1088,14 +1329,14 @@
         var p = parseFloat(precio);
         if (isNaN(p) || p < 0) return;
         var cat = (categoria || 'Otros').trim();
-        db.collection('menu').add({ nombre: nombre.trim(), precio: p, categoria: cat });
+        return db.collection('menu').add({ nombre: nombre.trim(), precio: p, categoria: cat });
     }
 
     function editarPlatillo(id, nombre, precio, categoria) {
         var p = parseFloat(precio);
         if (isNaN(p) || p < 0) return;
         var cat = (categoria || 'Otros').trim();
-        db.collection('menu').doc(id).update({ nombre: (nombre || '').trim(), precio: p, categoria: cat });
+        return db.collection('menu').doc(id).update({ nombre: (nombre || '').trim(), precio: p, categoria: cat });
     }
 
     function eliminarPlatillo(id) {
@@ -1104,46 +1345,147 @@
     }
 
     var CATEGORIAS_ORDEN = ['Entradas', 'Platos fuertes', 'Bebidas', 'Postres', 'Otros'];
+    var menuFilterCategoria = null; // null = todas
+
     function slugCategoria(cat) {
         var s = (cat || 'Otros').toLowerCase().replace(/\s+/g, '-');
         return (s === 'platos-fuertes' || s === 'entradas' || s === 'bebidas' || s === 'postres' || s === 'otros') ? s : 'otros';
     }
 
+    function inicialesProducto(nombre) {
+        if (!nombre || !nombre.trim()) return '?';
+        var parts = nombre.trim().split(/\s+/);
+        if (parts.length >= 2) return (parts[0][0] + parts[1][0]).toUpperCase();
+        return (nombre.trim().substring(0, 2) || '?').toUpperCase();
+    }
+
     function renderMenu(snap) {
-        if (!menuBody) return;
-        var rows = [];
-        if (snap.empty) {
-            rows.push('<tr><td colspan="4" class="msg-empty">No hay platillos. Agregue uno.</td></tr>');
-        } else {
-            var porCategoria = {};
+        if (!menuCardsGrid || !menuFilterPills || !menuEmptyState) return;
+        var items = [];
+        if (!snap.empty) {
             snap.forEach(function (d) {
                 var data = d.data();
                 var cat = data.categoria || 'Otros';
-                if (!porCategoria[cat]) porCategoria[cat] = [];
-                porCategoria[cat].push({ id: d.id, data: data });
-            });
-            CATEGORIAS_ORDEN.forEach(function (categoria) {
-                var items = porCategoria[categoria];
-                if (!items || items.length === 0) return;
-                var slug = slugCategoria(categoria);
-                rows.push('<tr class="menu-cat-header menu-cat-' + slug + '"><td colspan="4">' + escapeHtml(categoria.toUpperCase()) + '</td></tr>');
-                items.forEach(function (item) {
-                    var data = item.data;
-                    var id = item.id;
-                    var nombre = data.nombre || '';
-                    var precio = (data.precio != null) ? '$' + Number(data.precio).toFixed(2) : '';
-                    var cat = data.categoria || 'Otros';
-                    var rowSlug = slugCategoria(cat);
-                    rows.push(
-                        '<tr class="menu-row menu-row-cat-' + rowSlug + '"><td data-label="Nombre">' + escapeHtml(nombre) + '</td><td data-label="Precio">' + precio + '</td><td data-label="Categoría">' + escapeHtml(cat) + '</td><td data-label="Acciones">' +
-                        '<button type="button" class="btn-sm btn-secondary editar-platillo" data-id="' + id + '" data-nombre="' + escapeHtml(nombre) + '" data-precio="' + (data.precio != null ? data.precio : '') + '" data-categoria="' + escapeHtml(cat) + '">Editar</button> ' +
-                        '<button type="button" class="btn-sm btn-danger eliminar-platillo" data-id="' + id + '">Eliminar</button></td></tr>'
-                    );
+                items.push({
+                    id: d.id,
+                    data: data,
+                    nombre: data.nombre || '',
+                    precio: data.precio != null ? Number(data.precio) : 0,
+                    categoria: cat,
+                    imagen: data.imagen || data.image || ''
                 });
             });
         }
-        menuBody.innerHTML = rows.join('');
-        menuBody.querySelectorAll('.editar-platillo').forEach(function (btn) {
+
+        // Pills de categoría
+        menuFilterPills.innerHTML = '';
+        var pillTodos = document.createElement('button');
+        pillTodos.type = 'button';
+        pillTodos.className = 'menu-filter-pill' + (menuFilterCategoria === null ? ' active' : '');
+        pillTodos.textContent = 'Todos';
+        pillTodos.setAttribute('data-categoria', '');
+        pillTodos.addEventListener('click', function () {
+            menuFilterCategoria = null;
+            menuFilterPills.querySelectorAll('.menu-filter-pill').forEach(function (p) {
+                var c = p.getAttribute('data-categoria');
+                p.classList.toggle('active', (c === '' && menuFilterCategoria === null) || (c === menuFilterCategoria));
+            });
+            renderMenuFromItems(menuItemsAdmin);
+        });
+        menuFilterPills.appendChild(pillTodos);
+        CATEGORIAS_ORDEN.forEach(function (cat) {
+            var pill = document.createElement('button');
+            pill.type = 'button';
+            pill.className = 'menu-filter-pill' + (menuFilterCategoria === cat ? ' active' : '');
+            pill.textContent = cat;
+            pill.setAttribute('data-categoria', cat);
+            pill.addEventListener('click', function () {
+                menuFilterCategoria = cat;
+                menuFilterPills.querySelectorAll('.menu-filter-pill').forEach(function (p) {
+                    var c = p.getAttribute('data-categoria');
+                    p.classList.toggle('active', (c === '' && menuFilterCategoria === null) || (c === menuFilterCategoria));
+                });
+                renderMenuFromItems(menuItemsAdmin);
+            });
+            menuFilterPills.appendChild(pill);
+        });
+
+        menuItemsAdmin = items.map(function (x) {
+            return { id: x.id, nombre: x.nombre, precio: x.precio, categoria: x.categoria, imagen: x.imagen };
+        });
+        renderMenuFromItems(menuItemsAdmin);
+    }
+
+    function renderMenuFromItems(items) {
+        if (!menuCardsGrid || !menuEmptyState) return;
+        var filtrados = menuFilterCategoria ? items.filter(function (i) { return i.categoria === menuFilterCategoria; }) : items;
+
+        if (filtrados.length === 0) {
+            menuCardsGrid.style.display = 'none';
+            menuEmptyState.style.display = 'block';
+            var msgEl = menuEmptyState.querySelector('.empty-state-text');
+            if (msgEl) {
+                msgEl.textContent = items.length === 0
+                    ? 'Esperando nuevas experiencias gastronómicas…'
+                    : 'Ningún platillo en esta categoría.';
+            }
+            return;
+        }
+        menuEmptyState.style.display = 'none';
+        menuCardsGrid.style.display = 'grid';
+        menuCardsGrid.innerHTML = '';
+
+        filtrados.forEach(function (item) {
+            var slug = slugCategoria(item.categoria);
+            var iniciales = inicialesProducto(item.nombre);
+            var imgUrl = (item.imagen || '').trim();
+            var card = document.createElement('div');
+            card.className = 'product-card';
+
+            var topWrap = document.createElement('div');
+            topWrap.className = 'product-card-image-wrap';
+            if (imgUrl) {
+                var img = document.createElement('img');
+                img.className = 'product-card-image';
+                img.src = imgUrl;
+                img.alt = item.nombre;
+                img.loading = 'lazy';
+                img.onerror = function () {
+                    var ph = document.createElement('div');
+                    ph.className = 'product-card-placeholder';
+                    ph.setAttribute('data-cat', slug);
+                    ph.textContent = iniciales;
+                    topWrap.innerHTML = '';
+                    topWrap.appendChild(ph);
+                };
+                topWrap.appendChild(img);
+            } else {
+                var ph = document.createElement('div');
+                ph.className = 'product-card-placeholder';
+                ph.setAttribute('data-cat', slug);
+                ph.textContent = iniciales;
+                topWrap.appendChild(ph);
+            }
+            card.appendChild(topWrap);
+
+            var body = document.createElement('div');
+            body.className = 'product-card-body';
+            body.innerHTML = '<span class="product-card-name">' + escapeHtml(item.nombre) + '</span>' +
+                '<span class="product-card-meta">' + escapeHtml(item.categoria) + '</span>';
+            var footer = document.createElement('div');
+            footer.className = 'product-card-footer';
+            var precio = (item.precio != null) ? Number(item.precio).toFixed(2) : '0.00';
+            footer.innerHTML = '<div class="product-card-actions">' +
+                '<button type="button" class="btn-sm btn-secondary editar-platillo" data-id="' + item.id + '" data-nombre="' + escapeHtml(item.nombre) + '" data-precio="' + (item.precio != null ? item.precio : '') + '" data-categoria="' + escapeHtml(item.categoria) + '">Editar</button> ' +
+                '<button type="button" class="btn-sm btn-danger eliminar-platillo" data-id="' + item.id + '">Eliminar</button></div>' +
+                '<span class="product-card-price">$' + precio + '</span>';
+            body.appendChild(footer);
+            card.appendChild(body);
+
+            menuCardsGrid.appendChild(card);
+        });
+
+        menuCardsGrid.querySelectorAll('.editar-platillo').forEach(function (btn) {
             btn.addEventListener('click', function () {
                 var id = btn.getAttribute('data-id');
                 var nombre = btn.getAttribute('data-nombre') || '';
@@ -1152,11 +1494,10 @@
                 platilloNombre.value = nombre;
                 platilloPrecio.value = precio;
                 if (platilloCategoria) platilloCategoria.value = categoria;
-                modalPlatillo.setAttribute('data-edit-id', id);
-                modalPlatillo.style.display = 'block';
+                abrirModalPlatillo(id);
             });
         });
-        menuBody.querySelectorAll('.eliminar-platillo').forEach(function (btn) {
+        menuCardsGrid.querySelectorAll('.eliminar-platillo').forEach(function (btn) {
             btn.addEventListener('click', function () {
                 eliminarPlatillo(btn.getAttribute('data-id'));
             });
@@ -1176,22 +1517,55 @@
         });
         renderMenu(snap);
     }, function (err) {
-        if (menuBody) menuBody.innerHTML = '<tr><td colspan="4" class="msg-empty">Error al cargar menú.</td></tr>';
+        if (menuCardsGrid) menuCardsGrid.innerHTML = '';
+        if (menuEmptyState) {
+            menuEmptyState.style.display = 'block';
+            var p = menuEmptyState.querySelector('.empty-state-text');
+            if (p) p.textContent = 'Error al cargar el menú.';
+        }
         console.error(err);
     });
 
-    if (btnAgregarPlatillo) {
-        btnAgregarPlatillo.addEventListener('click', function () {
+    function abrirModalPlatillo(editId) {
+        if (!modalPlatillo) return;
+        var titleEl = document.getElementById('modalPlatilloTitle');
+        if (editId) {
+            if (titleEl) titleEl.textContent = 'Editar Platillo';
+            modalPlatillo.setAttribute('data-edit-id', editId);
+        } else {
+            if (titleEl) titleEl.textContent = 'Agregar Platillo';
             modalPlatillo.removeAttribute('data-edit-id');
             platilloNombre.value = '';
             platilloPrecio.value = '';
             if (platilloCategoria) platilloCategoria.value = 'Otros';
-            modalPlatillo.style.display = 'block';
+        }
+        modalPlatillo.classList.add('open');
+        modalPlatillo.style.display = 'flex';
+    }
+
+    function cerrarModalPlatillo() {
+        if (!modalPlatillo) return;
+        modalPlatillo.classList.remove('open');
+        setTimeout(function () {
+            if (!modalPlatillo.classList.contains('open')) {
+                modalPlatillo.style.display = 'none';
+            }
+        }, 300);
+    }
+
+    if (btnAgregarPlatillo) {
+        btnAgregarPlatillo.addEventListener('click', function () {
+            abrirModalPlatillo(null);
         });
     }
     if (btnCancelarPlatillo) {
         btnCancelarPlatillo.addEventListener('click', function () {
-            modalPlatillo.style.display = 'none';
+            cerrarModalPlatillo();
+        });
+    }
+    if (btnCerrarModalPlatillo) {
+        btnCerrarModalPlatillo.addEventListener('click', function () {
+            cerrarModalPlatillo();
         });
     }
     if (btnGuardarPlatillo) {
@@ -1200,12 +1574,20 @@
             var nombre = platilloNombre.value.trim();
             var precio = platilloPrecio.value;
             var categoria = platilloCategoria ? platilloCategoria.value : 'Otros';
-            if (editId) {
-                editarPlatillo(editId, nombre, precio, categoria);
+            var btn = this;
+            setButtonLoading(btn, true);
+            var prom = editId ? editarPlatillo(editId, nombre, precio, categoria) : agregarPlatillo(nombre, precio, categoria);
+            if (prom && typeof prom.then === 'function') {
+                prom.then(function () {
+                    modalPlatillo.style.display = 'none';
+                    setButtonLoading(btn, false);
+                }).catch(function () {
+                    setButtonLoading(btn, false);
+                });
             } else {
-                agregarPlatillo(nombre, precio, categoria);
+                modalPlatillo.style.display = 'none';
+                setButtonLoading(btn, false);
             }
-            modalPlatillo.style.display = 'none';
         });
     }
 
@@ -1249,7 +1631,7 @@
             meseroNombre.value = '';
             meseroEmail.value = '';
             meseroPassword.value = '';
-            alert('Mesero creado correctamente.');
+            showToastSafe('Mesero creado correctamente.', 'success');
         }).catch(function (err) {
             if (err && err.code === 'auth/email-already-in-use') {
                 secondaryAuth.signInWithEmailAndPassword(email, password).then(function (userCredential) {
@@ -1266,7 +1648,7 @@
                     meseroNombre.value = '';
                     meseroEmail.value = '';
                     meseroPassword.value = '';
-                    alert('Mesero actualizado correctamente.');
+                    showToastSafe('Mesero actualizado correctamente.', 'success');
                 }).catch(function (signInErr) {
                     if (meseroError) {
                         meseroError.textContent = 'El correo ya existe pero la contraseña no coincide. Usa la contraseña original de esa cuenta o elimínala desde Firebase Console → Authentication.';
@@ -1289,45 +1671,93 @@
         });
     }
 
+    // --- Meseros (Renderizado con Tarjetas) ---
     db.collection('usuarios').where('rol', '==', 'mesero').onSnapshot(function (snap) {
-        if (!meserosBody) return;
-        var rows = [];
+        var grid = document.getElementById('meserosGrid'); // Asegúrate de que este ID exista en el HTML
+        if (!grid) return;
+
         if (snap.empty) {
-            rows.push('<tr><td colspan="3" class="msg-empty">No hay meseros registrados.</td></tr>');
-        } else {
-            snap.forEach(function (d) {
-                var data = d.data();
-                rows.push('<tr><td>' + escapeHtml(data.nombre || '-') + '</td><td>' + escapeHtml(data.email || '-') + '</td><td><button type="button" class="btn-sm btn-danger eliminar-mesero" data-id="' + d.id + '" data-nombre="' + escapeHtml(data.nombre || '') + '">Eliminar</button></td></tr>');
-            });
+            grid.innerHTML = '<div class="msg-empty" style="grid-column: 1/-1;">No hay meseros registrados.</div>';
+            return;
         }
-        meserosBody.innerHTML = rows.join('');
+
+        var cardsHtml = '';
+        snap.forEach(function (doc) {
+            var data = doc.data();
+            var nombre = data.nombre || '—';
+            var email = data.email || '—';
+            // Obtener iniciales para el avatar
+            var iniciales = (nombre || '').split(' ').map(function (n) { return n[0]; }).join('').substring(0, 2).toUpperCase() || '?';
+
+            cardsHtml +=
+                '<div class="mesero-card" data-id="' + doc.id + '">' +
+                    '<div class="mesero-avatar">' + escapeHtml(iniciales) + '</div>' +
+                    '<div class="mesero-nombre" title="' + escapeHtml(nombre) + '">' + escapeHtml(nombre) + '</div>' +
+                    '<div class="mesero-email" title="' + escapeHtml(email) + '">' + escapeHtml(email) + '</div>' +
+                    '<div class="mesero-acciones">' +
+                        '<button type="button" class="btn-sm btn-danger eliminar-mesero" data-id="' + doc.id + '" data-nombre="' + escapeHtml(nombre) + '">Eliminar</button>' +
+                    '</div>' +
+                '</div>';
+        });
+        grid.innerHTML = cardsHtml;
+    }, function (err) {
+        console.error('Error al cargar meseros:', err);
+        var grid = document.getElementById('meserosGrid');
+        if (grid) grid.innerHTML = '<div class="msg-empty">Error al cargar meseros.</div>';
     });
 
-    if (meserosBody) {
-        meserosBody.addEventListener('click', function (e) {
+    // Delegación de eventos para eliminar meseros en la cuadrícula
+    if (meserosGrid) {
+        meserosGrid.addEventListener('click', function (e) {
             var btn = e.target.closest('.eliminar-mesero');
             if (!btn) return;
             var id = btn.getAttribute('data-id');
             var nombre = btn.getAttribute('data-nombre') || 'este mesero';
             if (!confirm('¿Eliminar a ' + nombre + '? Perderá acceso al sistema inmediatamente.')) return;
             db.collection('usuarios').doc(id).delete().then(function () {
-                alert('Mesero eliminado de la base de datos. Para revocar el acceso de Firebase Auth completamente, elimínalo también en Firebase Console → Authentication → Users.');
+                showToastSafe('Mesero eliminado de la base de datos. Para revocar el acceso de Firebase Auth completamente, elimínalo también en Firebase Console → Authentication → Users.', 'success');
             }).catch(function (err) {
                 console.error('Error al eliminar mesero:', err);
-                alert('No se pudo eliminar el mesero.');
+                showToastSafe('No se pudo eliminar el mesero.', 'error');
             });
         });
     }
 
+    function abrirModalMesero() {
+        if (!modalMesero) return;
+        var titleEl = document.getElementById('modalMeseroTitle');
+        if (titleEl) titleEl.textContent = 'Crear mesero';
+        meseroNombre.value = '';
+        meseroEmail.value = '';
+        meseroPassword.value = '';
+        if (meseroError) meseroError.style.display = 'none';
+        modalMesero.classList.add('open');
+        modalMesero.style.display = 'flex';
+    }
+
+    function cerrarModalMesero() {
+        if (!modalMesero) return;
+        modalMesero.classList.remove('open');
+        setTimeout(function () {
+            if (!modalMesero.classList.contains('open')) {
+                modalMesero.style.display = 'none';
+            }
+        }, 300);
+    }
+
     if (btnCrearMesero) {
         btnCrearMesero.addEventListener('click', function () {
-            modalMesero.style.display = 'block';
-            meseroError.style.display = 'none';
+            abrirModalMesero();
         });
     }
     if (btnCancelarMesero) {
         btnCancelarMesero.addEventListener('click', function () {
-            modalMesero.style.display = 'none';
+            cerrarModalMesero();
+        });
+    }
+    if (btnCerrarModalMesero) {
+        btnCerrarModalMesero.addEventListener('click', function () {
+            cerrarModalMesero();
         });
     }
     if (btnGuardarMesero) {
@@ -1344,8 +1774,8 @@
     // --- Gastos ---
     function registrarGasto(descripcion, categoria, monto, metodoPago) {
         var m = parseFloat(monto);
-        if (isNaN(m) || m <= 0) return;
-        db.collection('gastos').add({
+        if (isNaN(m) || m <= 0) return Promise.reject(new Error('Monto inválido'));
+        return db.collection('gastos').add({
             descripcion: (descripcion || '').trim(),
             categoria: categoria || 'otros',
             monto: m,
@@ -1358,53 +1788,141 @@
                 gastoOk.style.display = 'block';
                 setTimeout(function () { gastoOk.style.display = 'none'; }, 3000);
             }
-        }).catch(function (err) {
-            console.error(err);
         });
     }
 
     if (btnRegistrarGasto) {
         btnRegistrarGasto.addEventListener('click', function () {
-            registrarGasto(gastoDescripcion.value, gastoCategoria.value, gastoMonto.value, gastoMetodoPago.value);
+            var btn = this;
+            var prom = registrarGasto(gastoDescripcion.value, gastoCategoria.value, gastoMonto.value, gastoMetodoPago.value);
+            if (prom && typeof prom.then === 'function') {
+                setButtonLoading(btn, true);
+                prom.then(function () { setButtonLoading(btn, false); }).catch(function (err) {
+                    console.error(err);
+                    setButtonLoading(btn, false);
+                });
+            }
         });
     }
 
     // --- Reportes ---
     var reporteVentas = [];
 
+    function setReporteRango(rango) {
+        var now = new Date();
+        var hoy = now.toISOString().slice(0, 10);
+        if (rango === 'hoy') {
+            if (reporteDesde) reporteDesde.value = hoy;
+            if (reporteHasta) reporteHasta.value = hoy;
+        } else if (rango === 'semana') {
+            var lunes = new Date(now);
+            var d = now.getDay();
+            lunes.setDate(now.getDate() - (d === 0 ? 6 : d - 1));
+            if (reporteDesde) reporteDesde.value = lunes.toISOString().slice(0, 10);
+            if (reporteHasta) reporteHasta.value = hoy;
+        } else if (rango === 'mes') {
+            var primerDia = new Date(now.getFullYear(), now.getMonth(), 1);
+            if (reporteDesde) reporteDesde.value = primerDia.toISOString().slice(0, 10);
+            if (reporteHasta) reporteHasta.value = hoy;
+        }
+        [reporteQuickHoy, reporteQuickSemana, reporteQuickMes].forEach(function (btn) {
+            if (btn) btn.classList.toggle('active', btn.getAttribute('data-range') === rango);
+        });
+        filtrarReporte();
+    }
+
+    if (reporteQuickHoy) reporteQuickHoy.addEventListener('click', function () { setReporteRango('hoy'); });
+    if (reporteQuickSemana) reporteQuickSemana.addEventListener('click', function () { setReporteRango('semana'); });
+    if (reporteQuickMes) reporteQuickMes.addEventListener('click', function () { setReporteRango('mes'); });
+
     function filtrarReporte() {
-        var desde = reporteDesde.value;
-        var hasta = reporteHasta.value;
+        var desde = reporteDesde && reporteDesde.value ? reporteDesde.value : '';
+        var hasta = reporteHasta && reporteHasta.value ? reporteHasta.value : '';
         if (!desde || !hasta) {
-            reportesBody.innerHTML = '<tr><td colspan="4" class="msg-empty">Seleccione fechas desde y hasta.</td></tr>';
+            if (reportesBody) reportesBody.innerHTML = '<tr><td colspan="4" class="msg-empty">Seleccione fechas desde y hasta.</td></tr>';
+            if (reporteBalanceFoot) reporteBalanceFoot.style.display = 'none';
             return;
         }
         var d1 = firebase.firestore.Timestamp.fromDate(new Date(desde + 'T00:00:00'));
         var d2 = firebase.firestore.Timestamp.fromDate(new Date(hasta + 'T23:59:59.999'));
-        db.collection('ventas').where('timestamp', '>=', d1).where('timestamp', '<=', d2).get().then(function (snap) {
-            reporteVentas = [];
-            var total = 0;
-            snap.forEach(function (d) {
+        var pVentas = db.collection('ventas').where('timestamp', '>=', d1).where('timestamp', '<=', d2).get();
+        var pGastos = db.collection('gastos').where('fecha', '>=', d1).where('fecha', '<=', d2).get();
+        Promise.all([pVentas, pGastos]).then(function (results) {
+            var ventasSnap = results[0];
+            var gastosSnap = results[1];
+            var transacciones = [];
+            var totalIngresos = 0;
+            ventasSnap.forEach(function (d) {
                 var data = d.data();
-                reporteVentas.push({
-                    id: d.id,
-                    fecha: data.timestamp && data.timestamp.toDate ? data.timestamp.toDate() : null,
-                    mesa: data.mesa || '-',
-                    mesero: data.meseroNombre || '-',
-                    total: data.total || 0
+                var tot = data.total != null ? Number(data.total) : 0;
+                totalIngresos += tot;
+                var fechaObj = data.timestamp && data.timestamp.toDate ? data.timestamp.toDate() : null;
+                transacciones.push({
+                    tipo: 'ingreso',
+                    fecha: fechaObj,
+                    descripcion: 'Mesa ' + (data.mesa || '—') + ' · ' + (data.meseroNombre || '—'),
+                    monto: tot
                 });
-                total += data.total || 0;
             });
-            reporteTotalVentas.textContent = '$' + total.toFixed(2);
+            var totalGastos = 0;
+            gastosSnap.forEach(function (d) {
+                var data = d.data();
+                var monto = data.monto != null ? Number(data.monto) : 0;
+                totalGastos += monto;
+                var fechaObj = data.fecha && data.fecha.toDate ? data.fecha.toDate() : null;
+                transacciones.push({
+                    tipo: 'gasto',
+                    fecha: fechaObj,
+                    descripcion: (data.descripcion || '—') + ' · ' + (data.categoria || ''),
+                    monto: -monto
+                });
+            });
+            transacciones.sort(function (a, b) {
+                var ta = a.fecha ? a.fecha.getTime() : 0;
+                var tb = b.fecha ? b.fecha.getTime() : 0;
+                return ta - tb;
+            });
+            var balanceNeto = totalIngresos - totalGastos;
+
+            // Mini KPIs de resumen rápido
+            var miniIngresos = document.getElementById('reporteMiniIngresos');
+            var miniGastos = document.getElementById('reporteMiniGastos');
+            var miniBalance = document.getElementById('reporteMiniBalance');
+            if (miniIngresos) miniIngresos.textContent = formatearDinero(totalIngresos);
+            if (miniGastos) miniGastos.textContent = formatearDinero(totalGastos);
+            if (miniBalance) miniBalance.textContent = formatearDinero(balanceNeto);
             var rows = [];
-            reporteVentas.forEach(function (v) {
-                var f = v.fecha ? (v.fecha.getFullYear() + '-' + String(v.fecha.getMonth() + 1).padStart(2, '0') + '-' + String(v.fecha.getDate()).padStart(2, '0') + ' ' + v.fecha.toLocaleTimeString('es')) : '-';
-                rows.push('<tr><td data-label="Fecha">' + f + '</td><td data-label="Mesa">' + escapeHtml(v.mesa) + '</td><td data-label="Mesero">' + escapeHtml(v.mesero) + '</td><td data-label="Total">$' + Number(v.total).toFixed(2) + '</td></tr>');
-            });
-            if (rows.length === 0) {
-                rows.push('<tr><td colspan="4" class="msg-empty">No hay ventas en este período.</td></tr>');
+            if (transacciones.length === 0) {
+                rows.push('<tr><td colspan="4" class="msg-empty">No hay transacciones en este período.</td></tr>');
+            } else {
+                transacciones.forEach(function (t) {
+                    var fStr = t.fecha ? (t.fecha.getFullYear() + '-' + String(t.fecha.getMonth() + 1).padStart(2, '0') + '-' + String(t.fecha.getDate()).padStart(2, '0') + ' ' + t.fecha.toLocaleTimeString('es', { hour: '2-digit', minute: '2-digit' })) : '—';
+                    var badge = t.tipo === 'ingreso'
+                        ? '<span class="reporte-badge reporte-badge-ingreso">Ingreso</span>'
+                        : '<span class="reporte-badge reporte-badge-gasto">Gasto</span>';
+                    var montoStr = t.monto >= 0 ? formatearDinero(t.monto) : '-' + formatearDinero(Math.abs(t.monto));
+                    rows.push(
+                        '<tr>' +
+                        '<td class="reporte-cell-fecha" data-label="Fecha">' + escapeHtml(fStr) + '</td>' +
+                        '<td data-label="Tipo">' + badge + '</td>' +
+                        '<td data-label="Descripción">' + escapeHtml(t.descripcion) + '</td>' +
+                        '<td class="reporte-cell-monto" data-label="Monto">' + montoStr + '</td>' +
+                        '</tr>'
+                    );
+                });
             }
-            reportesBody.innerHTML = rows.join('');
+            if (reportesBody) reportesBody.innerHTML = rows.join('');
+            if (reporteBalanceFoot && reporteBalanceNeto) {
+                reporteBalanceFoot.style.display = transacciones.length > 0 ? 'table-footer-group' : 'none';
+                reporteBalanceNeto.textContent = formatearDinero(balanceNeto);
+                reporteBalanceNeto.classList.remove('reporte-balance-positivo', 'reporte-balance-negativo');
+                if (balanceNeto > 0) reporteBalanceNeto.classList.add('reporte-balance-positivo');
+                else if (balanceNeto < 0) reporteBalanceNeto.classList.add('reporte-balance-negativo');
+            }
+        }).catch(function (err) {
+            console.error('Error filtrando reporte:', err);
+            if (reportesBody) reportesBody.innerHTML = '<tr><td colspan="4" class="msg-empty">Error al cargar. Intente de nuevo.</td></tr>';
+            if (reporteBalanceFoot) reporteBalanceFoot.style.display = 'none';
         });
     }
 
@@ -1414,7 +1932,7 @@
         var desde = reporteDesde ? reporteDesde.value : '';
         var hasta = reporteHasta ? reporteHasta.value : '';
         if (!desde || !hasta) {
-            alert('Seleccione las fechas Desde y Hasta para generar el reporte.');
+            showToastSafe('Seleccione las fechas Desde y Hasta para generar el reporte.', 'info');
             return;
         }
         var tsDesde = firebase.firestore.Timestamp.fromDate(new Date(desde + 'T00:00:00'));
@@ -1498,7 +2016,7 @@
                 '</body></html>';
             var ventana = window.open('', '_blank');
             if (!ventana) {
-                alert('Permita ventanas emergentes para abrir el reporte.');
+                showToastSafe('Permita ventanas emergentes para abrir el reporte.', 'info');
                 return;
             }
             ventana.document.write(html);
@@ -1506,7 +2024,7 @@
             ventana.focus();
         }).catch(function (err) {
             console.error('Error generando reporte PDF:', err);
-            alert('No se pudo generar el reporte. Intente de nuevo.');
+            showToastSafe('No se pudo generar el reporte. Intente de nuevo.', 'error');
         });
     }
     if (btnExportarPdf) btnExportarPdf.addEventListener('click', exportarPdf);
@@ -1575,12 +2093,12 @@
         // PASO 3
         var passwordIngresada = inputPassword && inputPassword.value ? inputPassword.value.trim() : '';
         if (!passwordIngresada) {
-            alert('Debes ingresar tu contraseña');
+            showToastSafe('Debes ingresar tu contraseña', 'error');
             return;
         }
         var user = auth.currentUser;
         if (!user || !user.email) {
-            alert('No hay sesión de administrador activa.');
+            showToastSafe('No hay sesión de administrador activa.', 'error');
             restaurarBoton();
             return;
         }
@@ -1611,16 +2129,16 @@
                         btn.textContent = 'RESET OPERATIVO — CONSERVA VENTAS';
                         btn.disabled = false;
                     }
-                    alert('Reset completado. Todos los datos han sido eliminados. Los registros de ventas se conservaron.');
+                    showToastSafe('Reset completado. Todos los datos han sido eliminados. Los registros de ventas se conservaron.', 'success');
                 })
                 .catch(function (err) {
                     console.error('Error en reset total:', err);
-                    alert(err && err.message ? err.message : 'Error al eliminar datos.');
+                    showToastSafe(err && err.message ? err.message : 'Error al eliminar datos.', 'error');
                     restaurarBoton();
                 });
         }).catch(function (err) {
             console.error('Error reautenticación:', err);
-            alert('Contraseña incorrecta. Operación cancelada.');
+            showToastSafe('Contraseña incorrecta. Operación cancelada.', 'error');
             if (inputPassword) inputPassword.value = '';
         });
     }
@@ -1652,19 +2170,19 @@
         // PASO 3
         var textoConfirmacion = prompt('CONFIRMACIÓN FINAL: Escribe exactamente BORRAR TODO para proceder');
         if (textoConfirmacion !== 'BORRAR TODO') {
-            alert('Texto incorrecto. Operación cancelada.');
+            showToastSafe('Texto incorrecto. Operación cancelada.', 'error');
             return;
         }
 
         // VERIFICACIÓN DE CONTRASEÑA
         var passwordIngresada = inputPassword && inputPassword.value ? inputPassword.value.trim() : '';
         if (!passwordIngresada) {
-            alert('Debes ingresar tu contraseña de administrador.');
+            showToastSafe('Debes ingresar tu contraseña de administrador.', 'error');
             return;
         }
         var user = auth.currentUser;
         if (!user || !user.email) {
-            alert('No hay sesión de administrador activa.');
+            showToastSafe('No hay sesión de administrador activa.', 'error');
             restaurarBotonNuclear();
             return;
         }
@@ -1697,17 +2215,17 @@
                         btn.textContent = '☢️ BORRAR TODO — SIN EXCEPCIÓN';
                         btn.disabled = false;
                     }
-                    alert('Reset nuclear completado. El sistema ha sido reiniciado completamente. Todos los datos han sido eliminados.');
+                    showToastSafe('Reset nuclear completado. El sistema ha sido reiniciado completamente. Todos los datos han sido eliminados.', 'success');
                 })
                 .catch(function (err) {
                     console.error('Error en reset nuclear:', err);
-                    alert(err && err.message ? err.message : 'Error al eliminar datos.');
+                    showToastSafe(err && err.message ? err.message : 'Error al eliminar datos.', 'error');
                     restaurarBotonNuclear();
                     if (inputPassword) inputPassword.value = '';
                 });
         }).catch(function (err) {
             console.error('Error reautenticación:', err);
-            alert('Contraseña incorrecta');
+            showToastSafe('Contraseña incorrecta', 'error');
             if (inputPassword) inputPassword.value = '';
         });
     }
@@ -1763,15 +2281,15 @@
             var desde = desdeEl && parseInt(desdeEl.value, 10);
             var hasta = hastaEl && parseInt(hastaEl.value, 10);
             if (!desde || !hasta || isNaN(desde) || isNaN(hasta) || desde < 1 || hasta < 1) {
-                alert('Ingresa números válidos para Desde y Hasta (mínimo 1).');
+                showToastSafe('Ingresa números válidos para Desde y Hasta (mínimo 1).', 'error');
                 return;
             }
             if (desde > hasta) {
-                alert('Desde debe ser menor o igual que Hasta.');
+                showToastSafe('Desde debe ser menor o igual que Hasta.', 'error');
                 return;
             }
             if (hasta - desde + 1 > 200) {
-                alert('El intervalo no puede superar 200 mesas.');
+                showToastSafe('El intervalo no puede superar 200 mesas.', 'error');
                 return;
             }
             var arr = [];
@@ -1786,13 +2304,13 @@
             var manualEl = document.getElementById('mesasManual');
             var raw = (manualEl && manualEl.value) ? manualEl.value.trim() : '';
             if (!raw) {
-                alert('Escribe los números de mesa separados por comas.');
+                showToastSafe('Escribe los números de mesa separados por comas.', 'info');
                 return;
             }
             var partes = raw.split(',').map(function (s) { return parseInt(s.trim(), 10); });
             var numeros = partes.filter(function (n) { return !isNaN(n) && n >= 1; });
             if (numeros.length === 0) {
-                alert('No se encontraron números de mesa válidos');
+                showToastSafe('No se encontraron números de mesa válidos', 'error');
                 return;
             }
             numeros.sort(function (a, b) { return a - b; });
@@ -1809,18 +2327,18 @@
         btnGuardarMesas.addEventListener('click', function () {
             if (!mesasPendientes || mesasPendientes.length === 0) return;
             var btn = this;
-            btn.disabled = true;
+            setButtonLoading(btn, true);
             db.collection('configuracion').doc('mesas').set({
                 numeros: mesasPendientes,
                 actualizadoEn: firebase.firestore.FieldValue.serverTimestamp()
             }).then(function () {
-                alert('Configuración de mesas guardada correctamente');
+                showToastSafe('Configuración de mesas guardada correctamente', 'success');
                 cargarConfigMesas();
-                btn.disabled = true;
+                setButtonLoading(btn, false);
             }).catch(function (err) {
                 console.error('Error guardando mesas:', err);
-                alert(err && err.message ? err.message : 'Error al guardar.');
-                btn.disabled = false;
+                showToastSafe(err && err.message ? err.message : 'Error al guardar.', 'error');
+                setButtonLoading(btn, false);
             });
         });
     }
@@ -1925,7 +2443,7 @@
             var precio = parseFloat(inpPrecio.value) || 0;
             var cant = parseInt(inpCant.value, 10) || 0;
             var sub = precio * cant;
-            spanSub.textContent = '$' + sub.toFixed(2);
+            spanSub.textContent = formatearDinero(sub);
             recalcularTotalPedido();
         }
         selectPlatillo.addEventListener('change', function () {
@@ -1978,7 +2496,7 @@
                 total += t;
             }
         });
-        pedidoTotal.textContent = '$' + total.toFixed(2);
+        pedidoTotal.textContent = formatearDinero(total);
     }
 
     function guardarPedido() {
@@ -1987,14 +2505,14 @@
         var pedidoFilas = document.getElementById('pedidoFilas');
         var mesa = pedidoMesa && pedidoMesa.value ? pedidoMesa.value.trim() : '';
         if (!mesa) {
-            alert('Seleccione una mesa.');
+            showToastSafe('Seleccione una mesa.', 'info');
             return;
         }
         var meseroOpt = pedidoMesero && pedidoMesero.selectedIndex >= 0 ? pedidoMesero.options[pedidoMesero.selectedIndex] : null;
         var meseroId = meseroOpt ? meseroOpt.value : '';
         var meseroNombre = meseroOpt ? (meseroOpt.getAttribute('data-nombre') || meseroOpt.textContent) : '';
         if (!meseroId) {
-            alert('Seleccione un mesero.');
+            showToastSafe('Seleccione un mesero.', 'info');
             return;
         }
         var platillos = [];
@@ -2017,9 +2535,11 @@
             });
         }
         if (platillos.length === 0) {
-            alert('Agregue al menos un platillo: seleccione uno en el desplegable.');
+            showToastSafe('Agregue al menos un platillo: seleccione uno en el desplegable.', 'info');
             return;
         }
+        var btnPedido = document.getElementById('btnGuardarPedido');
+        setButtonLoading(btnPedido, true);
         db.collection('ordenes').add({
             mesa: mesa,
             platillos: platillos,
@@ -2030,7 +2550,7 @@
             timestamp: firebase.firestore.FieldValue.serverTimestamp(),
             creadoPorAdmin: true
         }).then(function () {
-            alert('Pedido guardado correctamente. Aparecerá en Órdenes en vivo.');
+            showToastSafe('Pedido guardado correctamente. Aparecerá en Órdenes en vivo.', 'success');
             if (pedidoMesa) pedidoMesa.value = '';
             if (pedidoMesero) pedidoMesero.value = '';
             if (pedidoFilas) {
@@ -2038,9 +2558,11 @@
                 agregarFilaPedido();
             }
             recalcularTotalPedido();
+            setButtonLoading(btnPedido, false);
         }).catch(function (err) {
             console.error('Error guardando pedido:', err);
-            alert('No se pudo guardar el pedido.');
+            showToastSafe('No se pudo guardar el pedido.', 'error');
+            setButtonLoading(btnPedido, false);
         });
     }
 
@@ -2059,33 +2581,42 @@
 
         db.collection('cotizaciones').orderBy('timestamp', 'desc').onSnapshot(function (snap) {
             if (snap.empty) {
-                cotizacionesBody.innerHTML = '<tr><td colspan="5" class="msg-empty">No hay cotizaciones.</td></tr>';
+                cotizacionesBody.innerHTML = '<p class="msg-empty" style="padding:2rem;text-align:center;">No hay cotizaciones.</p>';
                 return;
             }
-            var rows = [];
+            var cards = [];
             snap.forEach(function (d) {
                 var data = d.data();
                 var id = d.id;
                 var titulo = escapeHtml(data.titulo || '—');
                 var detallesStr = String(data.detalles || '—');
-                if (detallesStr.length > 40) {
-                    detallesStr = detallesStr.substring(0, 40) + '...';
-                }
+                if (detallesStr.length > 60) detallesStr = detallesStr.substring(0, 60) + '...';
                 detallesStr = escapeHtml(detallesStr);
-                var total = (data.total != null) ? '$' + Number(data.total).toFixed(2) : '$0.00';
+                var total = (data.total != null) ? formatearDinero(Number(data.total)) : formatearDinero(0);
                 var fecha = '—';
                 if (data.timestamp && data.timestamp.toDate) {
                     fecha = data.timestamp.toDate().toLocaleDateString('es');
                 }
-                rows.push(
-                    '<tr><td data-label="Título">' + titulo + '</td><td data-label="Detalles">' + detallesStr + '</td><td data-label="Total">' + total + '</td><td data-label="Fecha">' + fecha + '</td><td data-label="Acciones">' +
-                    '<button type="button" class="btn-sm btn-editar-cotizacion" data-id="' + escapeHtml(id) + '">Editar</button> ' +
-                    '<button type="button" class="btn-sm btn-imprimir-cotizacion" data-id="' + escapeHtml(id) + '">Imprimir</button> ' +
-                    '<button type="button" class="btn-sm btn-whatsapp btn-whatsapp-cotizacion" data-id="' + escapeHtml(id) + '">WhatsApp</button> ' +
-                    '<button type="button" class="btn-sm btn-danger btn-eliminar-cotizacion" data-id="' + escapeHtml(id) + '">Eliminar</button></td></tr>'
+                cards.push(
+                    '<div class="cotizacion-card" data-id="' + escapeHtml(id) + '">' +
+                    '<div class="cotizacion-card-header">' +
+                    '<span class="cotizacion-card-titulo">' + titulo + '</span>' +
+                    '<span class="cotizacion-card-fecha">' + fecha + '</span>' +
+                    '</div>' +
+                    '<p class="cotizacion-card-detalles">' + detallesStr + '</p>' +
+                    '<div class="cotizacion-card-footer">' +
+                    '<span class="cotizacion-card-total">' + total + '</span>' +
+                    '<div class="cotizacion-card-acciones">' +
+                    '<button type="button" class="btn-sm btn-editar-cotizacion" data-id="' + escapeHtml(id) + '" title="Editar">✏️</button>' +
+                    '<button type="button" class="btn-sm btn-imprimir-cotizacion" data-id="' + escapeHtml(id) + '" title="Imprimir">🖨️</button>' +
+                    '<button type="button" class="btn-sm btn-whatsapp btn-whatsapp-cotizacion" data-id="' + escapeHtml(id) + '" title="WhatsApp">💬</button>' +
+                    '<button type="button" class="btn-sm btn-danger btn-eliminar-cotizacion" data-id="' + escapeHtml(id) + '" title="Eliminar">🗑️</button>' +
+                    '</div>' +
+                    '</div>' +
+                    '</div>'
                 );
             });
-            cotizacionesBody.innerHTML = rows.join('');
+            cotizacionesBody.innerHTML = cards.join('');
 
             cotizacionesBody.querySelectorAll('.btn-eliminar-cotizacion').forEach(function (btn) {
                 btn.addEventListener('click', function () {
@@ -2093,7 +2624,7 @@
                     if (!confirm('¿Eliminar esta cotización?')) return;
                     db.collection('cotizaciones').doc(id).delete().catch(function (err) {
                         console.error('Error al eliminar cotización:', err);
-                        alert('No se pudo eliminar.');
+                        showToastSafe('No se pudo eliminar.', 'error');
                     });
                 });
             });
@@ -2110,7 +2641,6 @@
                     imprimirCotizacion(btn.getAttribute('data-id'));
                 });
             });
-
             cotizacionesBody.querySelectorAll('.btn-whatsapp-cotizacion').forEach(function (btn) {
                 btn.addEventListener('click', function () {
                     if (typeof window.enviarWhatsAppCotizacion === 'function') {
@@ -2158,7 +2688,7 @@
             var precio = parseFloat(inpPrecio.value) || 0;
             var cant = parseInt(inpCant.value, 10) || 0;
             var sub = precio * cant;
-            spanSub.textContent = '$' + sub.toFixed(2);
+            spanSub.textContent = formatearDinero(sub);
             recalcularTotalCotizacion();
         }
         inpPrecio.addEventListener('input', actualizarSubtotal);
@@ -2199,7 +2729,7 @@
                 total += t;
             }
         });
-        cotizacionTotal.textContent = '$' + total.toFixed(2);
+        cotizacionTotal.textContent = formatearDinero(total);
     }
 
     function guardarCotizacion() {
@@ -2208,7 +2738,7 @@
         var cotizacionFilas = document.getElementById('cotizacionFilas');
         var titulo = (cotizacionTitulo && cotizacionTitulo.value) ? cotizacionTitulo.value.trim() : '';
         if (!titulo) {
-            alert('Ingrese un título para la cotización.');
+            showToastSafe('Ingrese un título para la cotización.', 'info');
             return;
         }
         var detalles = (cotizacionDetalles && cotizacionDetalles.value) ? String(cotizacionDetalles.value).trim() : '';
@@ -2231,25 +2761,31 @@
             });
         }
         if (platillos.length === 0) {
-            alert('Agregue al menos un platillo con descripción y precio mayor a 0.');
+            showToastSafe('Agregue al menos un platillo con descripción y precio mayor a 0.', 'info');
             return;
         }
 
         var payload = { titulo: titulo, detalles: detalles, platillos: platillos, total: total, timestamp: firebase.firestore.FieldValue.serverTimestamp() };
 
+        var btnCotiz = document.getElementById('btnGuardarCotizacion');
+        setButtonLoading(btnCotiz, true);
         if (cotizacionEditandoId) {
             db.collection('cotizaciones').doc(cotizacionEditandoId).update(payload).then(function () {
                 cerrarFormularioCotizacion();
+                setButtonLoading(btnCotiz, false);
             }).catch(function (err) {
                 console.error('Error al actualizar cotización:', err);
-                alert('No se pudo guardar.');
+                showToastSafe('No se pudo guardar.', 'error');
+                setButtonLoading(btnCotiz, false);
             });
         } else {
             db.collection('cotizaciones').add(payload).then(function () {
                 cerrarFormularioCotizacion();
+                setButtonLoading(btnCotiz, false);
             }).catch(function (err) {
                 console.error('Error al guardar cotización:', err);
-                alert('No se pudo guardar.');
+                showToastSafe('No se pudo guardar.', 'error');
+                setButtonLoading(btnCotiz, false);
             });
         }
     }
@@ -2294,7 +2830,7 @@
                 if (subEl) {
                     var precio = Number(p.precio) || 0;
                     var cant = parseInt(p.cantidad, 10) || 1;
-                    subEl.textContent = '$' + (precio * cant).toFixed(2);
+                    subEl.textContent = formatearDinero(precio * cant);
                 }
             }
         });
@@ -2307,7 +2843,7 @@
     if (typeof window.prepararCotizacion === 'function') {
         window.prepararCotizacion(id);
     } else {
-        alert('El módulo de impresión no está disponible. Recarga la página.');
+        showToastSafe('El módulo de impresión no está disponible. Recarga la página.', 'error');
     }
 }
 
@@ -2345,7 +2881,26 @@
     var editGastoMetodo = document.getElementById('editGastoMetodo');
     var btnGuardarEditGasto = document.getElementById('btnGuardarEditGasto');
     var btnCancelarEditGasto = document.getElementById('btnCancelarEditGasto');
+    var btnCerrarModalEditarGasto = document.getElementById('btnCerrarModalEditarGasto');
     var gastoEditandoId = null;
+
+    function abrirModalEditarGasto() {
+        if (!modalEditarGasto) return;
+        var titleEl = document.getElementById('modalEditarGastoTitle');
+        if (titleEl) titleEl.textContent = 'Editar gasto';
+        modalEditarGasto.classList.add('open');
+        modalEditarGasto.style.display = 'flex';
+    }
+
+    function cerrarModalEditarGasto() {
+        if (!modalEditarGasto) return;
+        modalEditarGasto.classList.remove('open');
+        setTimeout(function () {
+            if (!modalEditarGasto.classList.contains('open')) {
+                modalEditarGasto.style.display = 'none';
+            }
+        }, 300);
+    }
 
     db.collection('gastos').orderBy('fecha', 'desc').onSnapshot(function (snap) {
         if (!gastosHistorialBody) return;
@@ -2359,7 +2914,7 @@
             var fecha = g.fecha && g.fecha.toDate ? g.fecha.toDate().toLocaleDateString('es') : '—';
             var desc = escapeHtml(g.descripcion || '—');
             var cat = escapeHtml(g.categoria || '—');
-            var monto = g.monto != null ? '$' + Number(g.monto).toFixed(2) : '—';
+            var monto = g.monto != null ? formatearDinero(Number(g.monto)) : '—';
             var metodo = escapeHtml(g.metodoPago || '—');
             rows.push(
                 '<tr>' +
@@ -2382,7 +2937,7 @@
                 editGastoCategoria.value = btn.getAttribute('data-cat');
                 editGastoMonto.value = btn.getAttribute('data-monto');
                 editGastoMetodo.value = btn.getAttribute('data-metodo');
-                modalEditarGasto.style.display = 'flex';
+                abrirModalEditarGasto();
             });
         });
     });
@@ -2392,23 +2947,33 @@
             if (!gastoEditandoId) return;
             var monto = parseFloat(editGastoMonto.value);
             if (isNaN(monto) || monto <= 0) return;
+            var btn = this;
+            setButtonLoading(btn, true);
             db.collection('gastos').doc(gastoEditandoId).update({
                 descripcion: editGastoDescripcion.value.trim(),
                 categoria: editGastoCategoria.value,
                 monto: monto,
                 metodoPago: editGastoMetodo.value
             }).then(function () {
-                modalEditarGasto.style.display = 'none';
+                cerrarModalEditarGasto();
                 gastoEditandoId = null;
+                setButtonLoading(btn, false);
             }).catch(function (err) {
                 console.error('Error al editar gasto:', err);
+                setButtonLoading(btn, false);
             });
         });
     }
 
     if (btnCancelarEditGasto) {
         btnCancelarEditGasto.addEventListener('click', function () {
-            modalEditarGasto.style.display = 'none';
+            cerrarModalEditarGasto();
+            gastoEditandoId = null;
+        });
+    }
+    if (btnCerrarModalEditarGasto) {
+        btnCerrarModalEditarGasto.addEventListener('click', function () {
+            cerrarModalEditarGasto();
             gastoEditandoId = null;
         });
     }
@@ -2427,4 +2992,85 @@
             if (items && items.classList.contains('nav-group-items')) items.classList.toggle('collapsed');
         });
     });
+})();
+
+// --- Sidebar Retráctil (Toggle y Persistencia) ---
+(function initSidebarToggle() {
+    var sidebarToggleBtn = document.getElementById('sidebarToggleBtn');
+    var appLayout = document.querySelector('.app-layout');
+
+    if (!sidebarToggleBtn || !appLayout) return;
+
+    // Función para actualizar el ícono del botón
+    function updateToggleIcon(isCollapsed) {
+        var svg = sidebarToggleBtn.querySelector('svg');
+        if (!svg) return;
+
+        if (isCollapsed) {
+            // Ícono para "expandir" (línea a la derecha)
+            svg.innerHTML = '<rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect><line x1="15" y1="3" x2="15" y2="21"></line>';
+            sidebarToggleBtn.setAttribute('title', 'Expandir menú (Ctrl+B)');
+        } else {
+            // Ícono para "contraer" (línea a la izquierda)
+            svg.innerHTML = '<rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect><line x1="9" y1="3" x2="9" y2="21"></line>';
+            sidebarToggleBtn.setAttribute('title', 'Contraer menú (Ctrl+B)');
+        }
+    }
+
+    // Cargar estado guardado
+    var savedState = null;
+    try {
+        savedState = localStorage.getItem('restiq_sidebar_collapsed');
+    } catch (e) {
+        savedState = null;
+    }
+
+    if (savedState === 'true') {
+        appLayout.classList.add('sidebar-collapsed');
+        updateToggleIcon(true);
+    } else {
+        updateToggleIcon(false);
+    }
+
+    // Evento click
+    sidebarToggleBtn.addEventListener('click', function () {
+        var isCollapsed = appLayout.classList.toggle('sidebar-collapsed');
+        try {
+            localStorage.setItem('restiq_sidebar_collapsed', isCollapsed);
+        } catch (e) {
+            // ignorar errores de almacenamiento
+        }
+        updateToggleIcon(isCollapsed);
+    });
+
+    // Atajo de teclado: Ctrl+B para toggle
+    document.addEventListener('keydown', function (e) {
+        if (e.ctrlKey && (e.key === 'b' || e.key === 'B')) {
+            // Evitar conflicto con atajos del navegador cuando el foco está en inputs
+            var target = e.target || e.srcElement;
+            var tag = target && target.tagName ? target.tagName.toLowerCase() : '';
+            if (tag === 'input' || tag === 'textarea' || tag === 'select' || target.isContentEditable) return;
+
+            e.preventDefault();
+            sidebarToggleBtn.click();
+        }
+    });
+})();
+
+// --- Detectar Sticky State para efectos visuales (Header) ---
+(function initStickyHeader() {
+    var header = document.querySelector('.header, header.app-header');
+    if (!header || !('IntersectionObserver' in window)) return;
+
+    var observer = new IntersectionObserver(
+        function (entries) {
+            var entry = entries[0];
+            // Cuando el header deja de estar completamente visible en su contenedor,
+            // asumimos que está en estado "pegado"
+            header.classList.toggle('sticky', entry.intersectionRatio < 1);
+        },
+        { threshold: [1] }
+    );
+
+    observer.observe(header);
 })();

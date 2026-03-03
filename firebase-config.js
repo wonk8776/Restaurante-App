@@ -1,10 +1,10 @@
 const firebaseConfig = {
-  apiKey: "AIzaSyBEq4u4ZIIS8Fmh5SLLZ650hp2_Xzf5gfc",
-  authDomain: "restaurante-familia-gonzalez.firebaseapp.com",
-  projectId: "restaurante-familia-gonzalez",
-  storageBucket: "restaurante-familia-gonzalez.firebasestorage.app",
-  messagingSenderId: "1078683557167",
-  appId: "1:1078683557167:web:4305195cca7ea9222c55da"
+  apiKey: "AIzaSyBG34IMqRZcqnw2eMspqb7tuHEL3Wi5bN4",
+  authDomain: "restaurante-app-101ec.firebaseapp.com",
+  projectId: "restaurante-app-101ec",
+  storageBucket: "restaurante-app-101ec.firebasestorage.app",
+  messagingSenderId: "493007993831",
+  appId: "1:493007993831:web:add80d9e53a08bafc59b42"
 };
 
 firebase.initializeApp(firebaseConfig);

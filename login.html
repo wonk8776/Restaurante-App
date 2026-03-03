@@ -4,14 +4,14 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Familia González — Acceso</title>
+    <title>RESTIQ — Acceso</title>
     <link rel="icon" type="image/png" href="icons/icon-192.png">
     <link rel="apple-touch-icon" href="icons/icon-192.png">
     <link rel="manifest" href="/manifest.json">
     <meta name="theme-color" content="#0F2D5E">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-    <meta name="apple-mobile-web-app-title" content="Familia González">
+    <meta name="apple-mobile-web-app-title" content="RESTIQ">
 
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -19,207 +19,121 @@
     <link rel="stylesheet" href="estilos.css">
 
     <style>
-        :root {
-            --color-bg: #F4F6FB;
-            --color-card: #FFFFFF;
-            --color-card-alt: #F0F4FF;
-            --color-sidebar: #0F2D5E;
-            --color-sidebar-active: #1565C0;
-            --color-sidebar-text: #FFFFFF;
-            --color-sidebar-text-muted: rgba(255,255,255,0.65);
-            --color-primary: #1A56DB;
-            --color-primary-light: #E3EEFF;
-            --color-primary-hover: #1447B8;
-            --color-accent: #1976D2;
-            --color-green: #2E7D32;
-            --color-green-light: #E8F5E9;
-            --color-green-action: #388E3C;
-            --color-green-action-hover: #2E7D32;
-            --color-red: #C62828;
-            --color-red-light: #FFEBEE;
-            --color-warning: #F57F17;
-            --color-warning-light: #FFF8E1;
-            --color-text: #1A2744;
-            --color-text-muted: #546E7A;
-            --color-text-dim: #90A4AE;
-            --color-border: #D6E0F0;
-            --color-border-focus: #1565C0;
-            --shadow-xs: 0 1px 3px rgba(26,58,107,0.08);
-            --shadow-sm: 0 2px 8px rgba(26,58,107,0.10);
-            --shadow-md: 0 4px 16px rgba(26,58,107,0.12);
-            --shadow-lg: 0 8px 32px rgba(26,58,107,0.16);
-            --radius-sm: 8px;
-            --radius-md: 12px;
-            --radius-lg: 16px;
-            --radius-pill: 999px;
-            --font-heading: 'DM Serif Display', serif;
-            --font-body: 'Inter', sans-serif;
-            --color-error: var(--color-red);
-        }
-
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-        }
-
-        ::-webkit-scrollbar {
-            width: 6px;
-        }
-        ::-webkit-scrollbar-track {
-            background: var(--color-bg);
-        }
-        ::-webkit-scrollbar-thumb {
-            background: var(--color-border);
-            border-radius: var(--radius-pill);
-        }
-        ::-webkit-scrollbar-thumb:hover {
-            background: var(--color-primary);
-        }
-
         body {
-            font-family: var(--font-body);
-            background: linear-gradient(135deg, #1A3A6B 0%, #1565C0 40%, #2E7D32 100%);
-            color: var(--color-text);
+            font-family: 'Inter', sans-serif;
+            background: linear-gradient(135deg, #0C1A2E 0%, #0F2847 50%, #0C1A2E 100%);
             display: flex;
             align-items: center;
             justify-content: center;
             min-height: 100vh;
             padding: 20px;
-            position: relative;
         }
-
+        body::before {
+            content: '';
+            position: fixed;
+            inset: 0;
+            background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.03'/%3E%3C/svg%3E");
+            pointer-events: none;
+        }
         .login-container {
             background: #FFFFFF;
-            padding: 2.5rem;
-            border-radius: var(--radius-lg);
-            box-shadow: var(--shadow-lg);
+            border-radius: 16px;
+            padding: 40px 40px 36px;
             width: 100%;
             max-width: 400px;
-            text-align: center;
-            border: none;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3), 0 0 0 1px rgba(255,255,255,0.05);
             position: relative;
-            z-index: 1;
         }
-        .login-container::before {
-            content: '';
-            position: absolute;
-            top: 0;
-            left: 0;
-            right: 0;
-            height: 4px;
-            border-radius: var(--radius-lg) var(--radius-lg) 0 0;
-            background: linear-gradient(90deg, var(--color-sidebar) 0%, var(--color-primary) 50%, var(--color-green-action) 100%);
+        .login-container .restiq-logo {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
+            margin-bottom: 6px;
+            color: #0F172A;
         }
-
-        .logo {
-            font-family: var(--font-heading);
-            font-size: 1.8rem;
-            color: var(--color-primary);
-            margin-bottom: 0;
-            letter-spacing: 1px;
+        .login-container .restiq-logo svg {
+            width: 36px;
+            height: 36px;
+            border-radius: 8px;
         }
-
-        .login-container .logo::after {
-            content: '';
-            display: block;
-            width: 60px;
-            margin: 0.75rem auto 1.5rem;
-            border-bottom: 2px solid var(--color-border);
+        .login-container .restiq-logo span:last-of-type {
+            font-size: 22px;
+            font-weight: 800;
+            color: #0F172A;
+            letter-spacing: -0.02em;
         }
-
+        .login-container .restiq-logo::after { display: none; }
         .subtitle {
-            color: var(--color-text-muted);
-            font-size: 0.9rem;
-            margin-bottom: 2rem;
-            font-weight: 300;
+            font-size: 13px;
+            color: #64748B;
+            text-align: center;
+            margin-bottom: 28px;
+            font-weight: 400;
         }
-
+        .login-container .form-group { margin-bottom: 16px; text-align: left; }
         .login-container .form-group label {
-            color: var(--color-text);
-            font-weight: 600;
-            font-size: 0.82rem;
-            letter-spacing: 0.3px;
-        }
-
-        .form-group {
-            margin-bottom: 1.5rem;
-            text-align: left;
-        }
-
-        label {
             display: block;
-            margin-bottom: 0.5rem;
-            font-size: 0.82rem;
-            color: var(--color-text);
+            font-size: 12px;
             font-weight: 600;
-            letter-spacing: 0.3px;
+            color: #0F172A;
+            margin-bottom: 6px;
         }
-
-        input {
+        .login-container input {
             width: 100%;
-            padding: 12px;
-            background: #F4F6FB;
-            border: 1.5px solid var(--color-border);
-            border-radius: var(--radius-sm);
-            color: var(--color-text);
-            font-size: 1rem;
-            transition: border-color 0.3s, box-shadow 0.3s;
+            max-width: 100%;
+            height: 38px;
+            padding: 0 12px;
+            background: #FFFFFF;
+            border: 1px solid #E2E8F0;
+            border-radius: 8px;
+            font-size: 14px;
+            color: #0F172A;
         }
-
-        input:focus {
+        .login-container input:focus {
             outline: none;
-            border-color: var(--color-border-focus);
-            box-shadow: 0 0 0 3px rgba(21,101,192,0.12);
+            border-color: #2563EB;
+            box-shadow: 0 0 0 3px rgba(37,99,235,0.12);
         }
-
-        input::placeholder {
-            color: var(--color-text-dim);
-        }
-
-        button {
+        .login-container input::placeholder { color: #94A3B8; }
+        button[type="submit"], #loginBtn {
             width: 100%;
-            padding: 14px;
-            background: var(--color-primary);
+            height: 42px;
+            background: #2563EB;
             color: #FFFFFF;
-            border: none;
-            border-radius: var(--radius-sm);
-            font-size: 0.95rem;
+            font-size: 14px;
             font-weight: 700;
-            cursor: pointer;
-            transition: background-color 0.3s, transform 0.1s, box-shadow 0.2s;
-            font-family: var(--font-body);
+            border-radius: 10px;
+            border: none;
+            letter-spacing: 0.03em;
             text-transform: uppercase;
-            letter-spacing: 1px;
-            margin-top: 1rem;
-            box-shadow: var(--shadow-md);
+            cursor: pointer;
+            transition: all 150ms ease;
         }
-
-        button:hover {
-            background: var(--color-primary-hover);
-            box-shadow: var(--shadow-lg);
-            transform: translateY(-1px);
+        button[type="submit"]:hover, #loginBtn:hover { background: #1D4ED8; }
+        #btnInstall {
+            width: 100%;
+            height: 38px;
+            background: transparent;
+            color: #64748B;
+            border: 1px solid #E2E8F0;
+            font-size: 13px;
+            font-weight: 500;
+            border-radius: 8px;
+            margin-top: 8px;
+            cursor: pointer;
+            transition: all 150ms ease;
         }
-
-        button:active {
-            opacity: 0.7;
-            transform: scale(0.98);
-        }
-
+        #btnInstall:hover { background: #F8FAFC; color: #0F172A; }
         .error-message {
-            color: var(--color-red);
-            font-size: 0.9rem;
+            color: #DC2626;
+            font-size: 13px;
             margin-top: 1rem;
             min-height: 1.25rem;
             opacity: 0;
             transition: opacity 0.3s;
         }
-
-        .error-message.visible {
-            opacity: 1;
-        }
-
-        /* Loading spinner */
+        .error-message.visible { opacity: 1; }
         .spinner {
             display: none;
             width: 20px;
@@ -230,41 +144,25 @@
             animation: spin 1s ease-in-out infinite;
             margin: 0 auto;
         }
-
-        @keyframes spin {
-            to {
-                transform: rotate(360deg);
-            }
-        }
-
-        button.loading .button-text {
-            display: none;
-        }
-
-        button.loading .spinner {
-            display: block;
-        }
+        @keyframes spin { to { transform: rotate(360deg); } }
+        button.loading .button-text { display: none; }
+        button.loading .spinner { display: block; }
     </style>
 </head>
 
 <body>
 
     <div class="login-container">
-        <h1 class="logo">
-            <svg viewBox="0 0 40 40" xmlns="http://www.w3.org/2000/svg" width="48" height="48" style="display:block;margin:0 auto 0.5rem;">
-                <ellipse cx="20" cy="26" rx="14" ry="10" fill="#8B0000"/>
-                <rect x="5" y="17" width="30" height="5" rx="2.5" fill="#6B0000"/>
-                <ellipse cx="20" cy="18" rx="14" ry="5" fill="#A00000"/>
-                <rect x="17" y="12" width="6" height="6" rx="3" fill="#5D4037"/>
-                <path d="M13,11 C12,9 14,7 13,4" fill="none" stroke="#E0E0E0" stroke-width="1.5" stroke-linecap="round"/>
-                <path d="M20,11 C19,9 21,7 20,4" fill="none" stroke="#E0E0E0" stroke-width="1.5" stroke-linecap="round"/>
-                <path d="M27,11 C26,9 28,7 27,4" fill="none" stroke="#E0E0E0" stroke-width="1.5" stroke-linecap="round"/>
-                <path d="M6,22 C3,22 3,28 6,28" fill="none" stroke="#6B0000" stroke-width="2.5" stroke-linecap="round"/>
-                <path d="M34,22 C37,22 37,28 34,28" fill="none" stroke="#6B0000" stroke-width="2.5" stroke-linecap="round"/>
+        <span class="restiq-logo">
+            <svg width="28" height="28" viewBox="0 0 28 28" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <rect width="28" height="28" rx="7" fill="#2563EB"/>
+                <path d="M7 8h8.5a3.5 3.5 0 0 1 0 7H7V8z" fill="white"/>
+                <path d="M7 15h5l5 5H7v-5z" fill="white" opacity="0.7"/>
+                <rect x="18" y="15" width="3" height="5" rx="1.5" fill="white" opacity="0.9"/>
             </svg>
-            Familia González
-        </h1>
-        <p class="subtitle">Sistema de gestión · Barbacoa y más</p>
+            <span>RESTIQ</span>
+        </span>
+        <p class="subtitle">Software de gestión para restaurantes</p>
 
         <form id="loginForm">
             <div class="form-group">
@@ -285,7 +183,7 @@
             <button
                 type="button"
                 id="btnInstall"
-                style="display:none; margin-top: 12px; width:100%; background: var(--color-primary); color:#fff; border:none; padding:12px; border-radius:10px; font-weight:700; cursor:pointer;"
+                style="display:none; margin-top: 8px;"
             >Instalar app</button>
 
             <div id="errorMessage" class="error-message"></div>

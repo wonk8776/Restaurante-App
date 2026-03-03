@@ -116,6 +116,96 @@ Sirve para **llevar el control de ventas, gastos y operación del restaurante** 
 
 ---
 
+## 3. Estructura técnica del proyecto (perspectiva archivo por archivo)
+
+Esta sección documenta **cómo está construido** el proyecto: ubicación de cada archivo, **qué hace** y **cómo se relaciona** con el resto. El objetivo es tener una visión integral y clara para mantenimiento, onboarding o auditoría técnica.
+
+### 3.1 Árbol de archivos y carpetas
+
+```
+restaurante-pro/
+├── index.html              # Panel de administración (SPA)
+├── login.html              # Página de inicio de sesión
+├── mesero.html             # Panel del mesero (tomar pedidos por mesa)
+├── estilos.css             # Estilos globales (variables, layout, componentes)
+├── firebase-config.js      # Configuración e inicialización de Firebase (Auth + Firestore)
+├── auth.js                 # Lógica de login y redirección por rol (admin / mesero)
+├── app.js                  # Lógica completa del panel admin (dashboard, órdenes, menú, reportes, etc.)
+├── ticket.js               # Generación de tickets (impresión 58mm y PNG para WhatsApp)
+├── sw.js                   # Service Worker registrado por la app (PWA, caché)
+├── service-worker.js       # Alternativa de Service Worker (Network First, exclusiones Firebase)
+├── manifest.json           # Manifest PWA (nombre, iconos, display standalone)
+├── vercel.json             # Configuración de despliegue en Vercel (headers SW y manifest)
+├── REPORTE_PWA_CONTABILIDAD.md   # Este documento
+└── icons/
+    ├── icon-192.png        # Icono PWA 192×192
+    └── icon-512.png        # Icono PWA 512×512
+```
+
+**Nota:** La aplicación registra **`sw.js`** en el navegador (`index.html`, `login.html`, `mesero.html`). El archivo **`service-worker.js`** es una variante más detallada (Network First, exclusión explícita de Firebase); si se desea usar esa versión, hay que registrar `service-worker.js` en lugar de `sw.js` y asegurar que Vercel sirva ese archivo (en `vercel.json` ya hay headers para `/service-worker.js`).
+
+---
+
+### 3.2 Descripción archivo por archivo
+
+| Ubicación | Archivo | Qué hace | Dónde se usa / dependencias |
+|-----------|---------|----------|-----------------------------|
+| **Raíz** | `index.html` | Página única del **panel de administración**. Contiene el markup de todas las secciones (Dashboard, Órdenes, Menú, Meseros, Gastos, Reportes, Reporte semanal, Mantenimiento, Configuración). Navegación por `data-section` sin recargar; una sola sección visible (`.section.active`). Incluye modales (platillo, mesero, método de pago, etc.). | Carga: `estilos.css`, Firebase (compat), `firebase-config.js`, `auth.js`, `ticket.js`, `app.js`, Chart.js, html2canvas. Registra `sw.js`. Solo accesible tras login con rol `admin`. |
+| **Raíz** | `login.html` | Página de **inicio de sesión**: formulario email/contraseña. Al enviar, llama a Firebase Auth y luego consulta el rol en Firestore (`usuarios/{uid}`); redirige a `index.html` (admin) o `mesero.html` (mesero). Muestra errores de login y estado de carga. | Carga: `estilos.css`, Firebase (compat), `firebase-config.js`, `auth.js`. Registra `sw.js`. No requiere estar logueado. |
+| **Raíz** | `mesero.html` | Página del **panel del mesero**: selección de mesa, menú desde Firestore, armado del pedido (cantidades/platillos) y envío a la colección `ordenes`. Opcionalmente impresión de ticket y envío por WhatsApp (usa `ticket.js`). | Carga: `estilos.css`, Firebase (compat), `firebase-config.js`, `auth.js`, `ticket.js`, script inline del mesero. Registra `sw.js`. Solo accesible tras login con rol `mesero`. |
+| **Raíz** | `estilos.css` | **Hojas de estilo globales**: variables CSS (`:root`), tipografía (Inter), layout (sidebar, contenido, cards), componentes (botones, tablas, modales, formularios), estados (hover, active, error). Usado por `index.html`, `login.html` y `mesero.html`. | Referenciado con `<link rel="stylesheet" href="estilos.css">` en las tres páginas HTML. |
+| **Raíz** | `firebase-config.js` | **Configuración de Firebase**: objeto `firebaseConfig` (apiKey, authDomain, projectId, etc.) y llamada a `firebase.initializeApp()`. Expone `auth` y `db` (Firestore) como variables globales. Debe cargarse **después** de los scripts de Firebase (app, auth, firestore) y **antes** de `auth.js` y `app.js`. | Cargado en `index.html`, `login.html` y `mesero.html` después de los SDKs de Firebase. |
+| **Raíz** | `auth.js` | **Autenticación y redirección por rol**: maneja el submit del formulario de login (`signInWithEmailAndPassword`), obtiene el documento `usuarios/{uid}` en Firestore, lee el campo `rol` y redirige a `index.html` (admin) o `mesero.html` (mesero). Incluye `onAuthStateChanged` para redirigir al login si no hay sesión en una página protegida. Muestra errores y estado de carga en la UI. | Cargado en las tres páginas HTML después de `firebase-config.js`. Depende de `auth` y `db` definidos en `firebase-config.js`. |
+| **Raíz** | `app.js` | **Lógica del panel administrador**: envuelto en IIFE. Gestiona navegación por secciones, listeners en tiempo real de Firestore (`onSnapshot`) para órdenes, ventas, gastos, menú, usuarios (meseros), configuración. Dashboard (ventas/gastos del día, ganancia, órdenes activas), CRUD de menú y meseros, registro de gastos, reportes por fechas, reporte semanal, mantenimiento (eliminación por período), configuración de mesas. Cobro de órdenes (modal método de pago, escritura en `ventas`). Llama a `prepararTicket`, `enviarWhatsApp`, etc. de `ticket.js`. | Cargado solo en `index.html` después de `ticket.js`. Depende de `auth`, `db` y de las funciones globales de `ticket.js`. |
+| **Raíz** | `ticket.js` | **Tickets e impresión**: IIFE que expone `prepararTicket(ordenId)`, `enviarWhatsApp(ordenId)`, `prepararCotizacion(cotizacionId)`, `enviarWhatsAppCotizacion(cotizacionId)`. Lee orden/cotización desde Firestore, genera HTML con estilos para impresión (58 mm) o para imagen PNG (WhatsApp), abre ventana e imprime o usa html2canvas para descargar PNG. Marca "Familia González" en cabecera y pie. | Cargado en `index.html` y `mesero.html` después de `auth.js`. Depende de `db`; usa `html2canvas` si está presente (para WhatsApp). |
+| **Raíz** | `sw.js` | **Service Worker** registrado por la app: en `install` precachea lista de estáticos (`index.html`, `mesero.html`, `login.html`, `firebase-config.js`, `auth.js`, `app.js`, iconos). En `fetch` no intercepta peticiones a orígenes distintos ni URLs que contengan "firebase" o "googleapis"/"gstatic"; para el resto de estáticos usa red y actualiza caché (estrategia tipo Network First con fallback a caché). En `activate` limpia cachés antiguos y hace `skipWaiting`/`clients.claim`. | Registrado desde `index.html`, `login.html` y `mesero.html` con `navigator.serviceWorker.register('/sw.js')`. |
+| **Raíz** | `service-worker.js` | **Service Worker alternativo**: estrategia Network First documentada; excluye explícitamente Firestore y APIs de Firebase (por hostname). Lista de estáticos incluye `manifest.json` y variantes SVG de iconos. No se registra por defecto en el código actual. | Pensado para registrarse en lugar de `sw.js` si se quiere esta variante; `vercel.json` define headers para `/service-worker.js`. |
+| **Raíz** | `manifest.json` | **Web App Manifest**: nombre "Familia González", `short_name`, descripción, `display: standalone`, `theme_color`, `background_color`, iconos 192 y 512. Usado por el navegador para instalar la PWA y mostrar splash/barra. | Enlazado con `<link rel="manifest" href="/manifest.json">` en las tres páginas HTML. |
+| **Raíz** | `vercel.json` | **Configuración Vercel**: headers para `/service-worker.js` (Cache-Control: no-cache, Service-Worker-Allowed: /) y para `/manifest.json` (Content-Type: application/manifest+json). Asegura que el SW y el manifest se sirvan correctamente en producción. | Aplicado en el despliegue en Vercel; no lo referencia ningún archivo del front. |
+| **Raíz** | `REPORTE_PWA_CONTABILIDAD.md` | **Documentación**: reporte integral del proyecto (perspectiva técnica, cliente y estructura archivo por archivo). | Solo lectura/documentación. |
+| **icons/** | `icon-192.png` | Icono de la PWA 192×192 px. | Referenciado en `manifest.json` y como favicon/apple-touch-icon en los HTML. |
+| **icons/** | `icon-512.png` | Icono de la PWA 512×512 px. | Referenciado en `manifest.json`. |
+
+---
+
+### 3.3 Orden de carga de scripts (flujo técnico)
+
+- **Login (`login.html`):**  
+  Firebase SDKs → `firebase-config.js` → `auth.js` → registro de `sw.js`.
+
+- **Panel admin (`index.html`):**  
+  Chart.js (para gráficas) → html2canvas (para PNG WhatsApp) → Firebase SDKs → `firebase-config.js` → `auth.js` → `ticket.js` → `app.js` → registro de `sw.js`.
+
+- **Panel mesero (`mesero.html`):**  
+  html2canvas → Firebase SDKs → `firebase-config.js` → `auth.js` → `ticket.js` → script propio del mesero → registro de `sw.js`.
+
+En todas las páginas, **Firebase** y **firebase-config.js** deben cargarse antes que cualquier script que use `auth` o `db`.
+
+---
+
+### 3.4 Dependencias externas (CDN)
+
+| Recurso | Uso |
+|--------|-----|
+| Firebase JS (app-compat, auth-compat, firestore-compat) v9 | Autenticación y Firestore. |
+| Chart.js (jsdelivr) | Gráfica de ingresos/gastos últimos 7 días en el dashboard (solo `index.html`). |
+| html2canvas (cdnjs) | Generación de imagen PNG del ticket para WhatsApp en `ticket.js` (en `index.html` y `mesero.html`). |
+| Google Fonts (Inter, DM Serif Display) | Tipografía en `estilos.css` y en los HTML. |
+
+---
+
+### 3.5 Resumen de la estructura
+
+- **Entrada:** `login.html` → autenticación y redirección por rol (`auth.js`).
+- **Pantallas:** `index.html` (admin) y `mesero.html` (mesero), ambas con `estilos.css` y la misma base Firebase + auth.
+- **Backend:** Solo Firebase (Auth + Firestore); no hay servidor propio.
+- **PWA:** `manifest.json` + `sw.js` (o `service-worker.js`), con `vercel.json` para headers en producción.
+- **Documentación:** `REPORTE_PWA_CONTABILIDAD.md` describe qué hace el sistema, para quién y cómo está construido archivo por archivo.
+
+Con esta sección se tiene una **perspectiva técnica integral** del proyecto: estructura clara, ubicación de archivos, función de cada uno y relaciones entre ellos.
+
+---
+
 ## Resumen ejecutivo
 
 | Pregunta | Respuesta técnica | Respuesta cliente |
@@ -124,6 +214,8 @@ Sirve para **llevar el control de ventas, gastos y operación del restaurante** 
 | **¿Para qué sirve?** | Centralizar operación y contabilidad en Firestore en tiempo real, con roles y sin backend propio. | Llevar control de caja, ver ganancia en vivo, que meseros tomen pedidos y sacar reportes para contabilidad. |
 | **¿Cómo funciona?** | Login → rol en Firestore → redirección; lecturas/escrituras en tiempo real; reportes con consultas por rango de fechas; PWA con caché Network First. | Entra con usuario/contraseña; admin ve dashboard y reportes; mesero toma pedidos por mesa; al cobrar se registra la venta y puede imprimir ticket y reportes. |
 
+**Documentación de estructura:** El apartado *3. Estructura técnica del proyecto* describe la construcción archivo por archivo: árbol de carpetas, función de cada archivo, ubicación, dependencias y orden de carga de scripts, para una visión integral y plena del proyecto.
+
 ---
 
-*Documento generado a partir del proyecto Restaurante Pro — Familia González — PWA de contabilidad. Última actualización: febrero 2025.*
+*Documento generado a partir del proyecto Restaurante Pro — Familia González — PWA de contabilidad. Última actualización: marzo 2025.*

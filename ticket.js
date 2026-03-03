@@ -27,27 +27,30 @@
             '</svg>';
     }
 
-    // ─── Estilos CSS para ventana de impresión (usa flex, funciona en navegador) ───
+    // ─── Estilos CSS para ventana de impresión (layout ticket, sin bordes pesados, @page sin margen) ───
     function ticketStylesPrint() {
-        return '@page { size: 58mm auto; margin: 1mm 0mm; }' +
-            'body { width: 200px; max-width: 200px; margin: 0 auto; padding: 2px 0; background: #fff; color: #000; font-family: Arial, sans-serif; font-size: 9pt; line-height: 1.4; }' +
-            '.ticket-logo-svg { text-align: center; margin-bottom: 4px; }' +
-            '.ticket-nombre { text-align: center; font-size: 13pt; font-weight: 900; margin-bottom: 4px; }' +
-            '.ticket-fecha { text-align: center; font-size: 8pt; margin-bottom: 4px; }' +
-            '.ticket-sep-doble { border-top: 2.5px solid #000; margin: 3px 0; }' +
-            '.ticket-sep-punto { border-top: 1px dashed #555; margin: 3px 0; }' +
+        var baseFont = '10pt';
+        var totalFont = '12pt'; // ~20% más grande que 10pt
+        return '@page { size: 58mm auto; margin: 0; }' +
+            'body { width: 200px; max-width: 200px; margin: 0 auto; padding: 4px 0; background: #fff; color: #000; font-family: Arial, sans-serif; font-size: ' + baseFont + '; line-height: 1.4; }' +
+            '.ticket-logo-svg { text-align: center; margin-bottom: 6px; }' +
+            '.ticket-nombre { font-family: Georgia, "Times New Roman", serif; font-size: 12pt; font-weight: 600; letter-spacing: 0.35em; text-align: center; text-transform: uppercase; margin-bottom: 6px; color: #000; }' +
+            '.ticket-fecha { text-align: center; font-size: 8pt; margin-bottom: 6px; color: #333; }' +
+            '.ticket-sep-doble, .ticket-sep-punto { border: none; border-top: 1px dashed #000; margin: 6px 0; }' +
             '.ticket-detalles { font-size: 9pt; margin: 4px 0; }' +
             '.ticket-detalle { margin: 2px 0; }' +
-            '.ticket-label { font-weight: 900; min-width: 60px; display: inline-block; }' +
-            '.ticket-encabezado { font-size: 8pt; border-top: 1.5px solid #000; border-bottom: 1.5px solid #000; padding: 2px 0; display: flex; justify-content: space-between; }' +
-            '.ticket-encabezado span { font-weight: 900; }' +
-            '.ticket-fila-platillo { border-bottom: 1px dashed #aaa; padding: 3px 0; font-size: 9pt; }' +
+            '.ticket-label { font-weight: 700; min-width: 60px; display: inline-block; }' +
+            '.ticket-encabezado { font-size: 8pt; padding: 4px 0; display: flex; justify-content: space-between; border: none; border-top: 1px dashed #000; margin-top: 4px; }' +
+            '.ticket-encabezado span { font-weight: 700; }' +
+            '.ticket-fila-platillo { padding: 4px 0; font-size: 9pt; border: none; border-bottom: 1px dashed #000; }' +
+            '.ticket-fila-platillo:last-child { border-bottom: none; }' +
             '.ticket-linea1 { display: flex; justify-content: space-between; align-items: baseline; }' +
             '.ticket-platillo-main { flex: 1; word-break: break-word; padding-right: 4px; }' +
             '.ticket-platillo-importe { width: 60px; flex-shrink: 0; text-align: right; }' +
-            '.ticket-linea2 { padding-left: 2px; font-size: 9pt; color: #000; }' +
-            '.ticket-total { text-align: right; font-size: 13pt; font-weight: 900; margin: 6px 0; }' +
-            '.ticket-pie { text-align: center; font-size: 9pt; margin: 6px 0; font-style: italic; }' +
+            '.ticket-linea2 { padding-left: 2px; font-size: 8pt; color: #333; }' +
+            '.ticket-total { text-align: right; font-size: ' + totalFont + '; font-weight: 700; margin: 8px 0 6px; color: #000; }' +
+            '.ticket-pie { text-align: center; font-size: 9pt; margin: 8px 0 4px; font-style: italic; color: #000; }' +
+            '.ticket-qr-placeholder { text-align: center; font-size: 8pt; color: #666; margin-top: 8px; padding: 6px 0; border-top: 1px dashed #000; }' +
             '.no-print { margin-top: 12px; text-align: center; }' +
             '.no-print button { padding: 8px 16px; cursor: pointer; font-size: 9pt; }' +
             '@media print { .no-print { display: none !important; } }';
@@ -57,21 +60,21 @@
     function ticketStylesWhatsApp() {
         return 'body { width: 320px; margin: 0 auto; padding: 10px; background: #fff; color: #000; font-family: Arial, sans-serif; font-size: 11px; line-height: 1.4; box-sizing: border-box; }' +
             '.ticket-logo-svg { text-align: center; margin-bottom: 6px; }' +
-            '.ticket-nombre { text-align: center; font-size: 16px; font-weight: 900; margin-bottom: 4px; }' +
-            '.ticket-fecha { text-align: center; font-size: 10px; margin-bottom: 6px; }' +
-            '.ticket-sep-doble { border-top: 2.5px solid #000; margin: 4px 0; }' +
-            '.ticket-sep-punto { border-top: 1px dashed #555; margin: 4px 0; }' +
+            '.ticket-nombre { font-family: Georgia, "Times New Roman", serif; font-size: 16px; font-weight: 600; letter-spacing: 0.25em; text-align: center; text-transform: uppercase; margin-bottom: 4px; color: #000; }' +
+            '.ticket-fecha { text-align: center; font-size: 10px; margin-bottom: 6px; color: #333; }' +
+            '.ticket-sep-doble, .ticket-sep-punto { border: none; border-top: 1px dashed #000; margin: 4px 0; }' +
             '.ticket-detalles { font-size: 11px; margin: 4px 0; }' +
             '.ticket-detalle { margin: 2px 0; }' +
-            '.ticket-label { font-weight: 900; }' +
+            '.ticket-label { font-weight: 700; }' +
             '.ticket-tabla { width: 100%; border-collapse: collapse; margin: 0; }' +
-            '.ticket-tabla th { font-size: 10px; font-weight: 900; text-align: left; border-top: 1.5px solid #000; border-bottom: 1.5px solid #000; padding: 2px 0; }' +
+            '.ticket-tabla th { font-size: 10px; font-weight: 700; text-align: left; border: none; border-top: 1px dashed #000; border-bottom: 1px dashed #000; padding: 4px 0; }' +
             '.ticket-tabla th.col-imp { text-align: right; }' +
-            '.ticket-tabla td { font-size: 11px; vertical-align: top; padding: 3px 0; border-bottom: 1px dashed #aaa; }' +
+            '.ticket-tabla td { font-size: 11px; vertical-align: top; padding: 3px 0; border: none; border-bottom: 1px dashed #ccc; }' +
             '.ticket-tabla td.col-imp { text-align: right; white-space: nowrap; padding-left: 8px; }' +
-            '.ticket-precio-unit { font-size: 10px; color: #000; }' +
-            '.ticket-total { text-align: right; font-size: 15px; font-weight: 900; margin: 6px 0; }' +
-            '.ticket-pie { text-align: center; font-size: 10px; margin: 6px 0; font-style: italic; }';
+            '.ticket-precio-unit { font-size: 10px; color: #333; }' +
+            '.ticket-total { text-align: right; font-size: 14px; font-weight: 700; margin: 8px 0 6px; color: #000; }' +
+            '.ticket-pie { text-align: center; font-size: 10px; margin: 8px 0 4px; font-style: italic; color: #000; }' +
+            '.ticket-qr-placeholder { text-align: center; font-size: 9px; color: #666; margin-top: 6px; padding: 4px 0; border-top: 1px dashed #999; }';
     }
 
     // ─── Limpia nombres contaminados "nombre — $precio" de Firestore ───
@@ -121,16 +124,20 @@
         return filas;
     }
 
-    // ─── Abre ventana nueva e imprime ───
+    // ─── Abre ventana nueva e imprime (título para cabecera de impresión; @page margin:0 para reducir cabeceras del navegador) ───
     function abrirVentanaTicket(bodyContent) {
-        var html = '<!DOCTYPE html><html><head><meta charset="utf-8"><style>' +
+        var html = '<!DOCTYPE html><html lang="es"><head><meta charset="utf-8"><title>FAMILIA GONZÁLEZ — Ticket</title><style>' +
             ticketStylesPrint() +
             '</style></head><body>' + bodyContent +
-            '<script>window.onload=function(){setTimeout(function(){window.print();},400);};<\/script>' +
+            '<script>window.onload=function(){document.title="FAMILIA GONZÁLEZ"; setTimeout(function(){window.print();},400);};<\/script>' +
             '</body></html>';
         var w = window.open('', '_blank', 'width=260,height=700');
         if (!w) {
-            alert('El navegador bloqueó la ventana emergente.\n\nPara imprimir:\n1. Haz clic en el ícono de bloqueo en la barra del navegador\n2. Selecciona "Permitir ventanas emergentes"\n3. Vuelve a hacer clic en Imprimir');
+            if (typeof window.showToast === 'function') {
+                window.showToast('El navegador bloqueó la ventana emergente. Permita ventanas emergentes para esta página e intente de nuevo.', 'error');
+            } else {
+                alert('El navegador bloqueó la ventana emergente.\n\nPara imprimir:\n1. Haz clic en el ícono de bloqueo en la barra del navegador\n2. Selecciona "Permitir ventanas emergentes"\n3. Vuelve a hacer clic en Imprimir');
+            }
             return;
         }
         w.document.open();
@@ -141,7 +148,11 @@
     // ─── Genera PNG para WhatsApp usando iframe aislado (tabla, sin flex) ───
     function generarImagenWhatsApp(bodyWhatsApp, nombreArchivo) {
         if (typeof html2canvas === 'undefined') {
-            alert('html2canvas no está cargado. Comprueba la conexión.');
+            if (typeof window.showToast === 'function') {
+                window.showToast('html2canvas no está cargado. Comprueba la conexión.', 'error');
+            } else {
+                alert('html2canvas no está cargado. Comprueba la conexión.');
+            }
             return;
         }
 
@@ -174,11 +185,19 @@
                 a.click();
                 document.body.removeChild(a);
                 document.body.removeChild(iframe);
-                alert('Imagen descargada. Ábrela desde tu galería y compártela por WhatsApp.');
+                if (typeof window.showToast === 'function') {
+                    window.showToast('Imagen descargada. Ábrela desde tu galería y compártela por WhatsApp.', 'success');
+                } else {
+                    alert('Imagen descargada. Ábrela desde tu galería y compártela por WhatsApp.');
+                }
             }).catch(function (err) {
                 console.error('Error html2canvas:', err);
                 document.body.removeChild(iframe);
-                alert('No se pudo generar la imagen del ticket.');
+                if (typeof window.showToast === 'function') {
+                    window.showToast('No se pudo generar la imagen del ticket.', 'error');
+                } else {
+                    alert('No se pudo generar la imagen del ticket.');
+                }
             });
         }, 500);
     }
@@ -187,7 +206,7 @@
     function buildBodyOrdenPrint(mesa, meseroNombre, fechaStr, platillos, total) {
         var totalFormatted = Number(total).toLocaleString('es-MX', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
         return '<div class="ticket-logo-svg">' + logoSVG() + '</div>' +
-            '<div class="ticket-nombre">Familia González</div>' +
+            '<div class="ticket-nombre">FAMILIA GONZÁLEZ</div>' +
             '<div class="ticket-fecha">' + escapeHtml(fechaStr) + '</div>' +
             '<div class="ticket-sep-doble"></div>' +
             '<div class="ticket-detalles">' +
@@ -200,7 +219,8 @@
             '<div class="ticket-sep-doble"></div>' +
             '<div class="ticket-total">TOTAL: $' + totalFormatted + '</div>' +
             '<div class="ticket-sep-punto"></div>' +
-            '<div class="ticket-pie">¡Gracias por su preferencia!</div>' +
+            '<div class="ticket-pie">Gracias por su preferencia. ¡Lo esperamos pronto!</div>' +
+            '<div class="ticket-qr-placeholder">Dénos su opinión</div>' +
             '<div class="no-print"><button type="button" onclick="window.print();">🖨 Imprimir ticket</button></div>';
     }
 
@@ -208,7 +228,7 @@
     function buildBodyOrdenWhatsApp(mesa, meseroNombre, fechaStr, platillos, total) {
         var totalFormatted = Number(total).toLocaleString('es-MX', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
         return '<div class="ticket-logo-svg">' + logoSVG() + '</div>' +
-            '<div class="ticket-nombre">Familia González</div>' +
+            '<div class="ticket-nombre">FAMILIA GONZÁLEZ</div>' +
             '<div class="ticket-fecha">' + escapeHtml(fechaStr) + '</div>' +
             '<div class="ticket-sep-doble"></div>' +
             '<div class="ticket-detalles">' +
@@ -222,14 +242,15 @@
             '<div class="ticket-sep-doble"></div>' +
             '<div class="ticket-total">TOTAL: $' + totalFormatted + '</div>' +
             '<div class="ticket-sep-punto"></div>' +
-            '<div class="ticket-pie">¡Gracias por su preferencia!</div>';
+            '<div class="ticket-pie">Gracias por su preferencia. ¡Lo esperamos pronto!</div>' +
+            '<div class="ticket-qr-placeholder">Dénos su opinión</div>';
     }
 
     // ─── Body de COTIZACIÓN para impresión (flex) ───
     function buildBodyCotizacionPrint(titulo, detalles, fechaStr, platillos, total) {
         var totalFormatted = Number(total).toLocaleString('es-MX', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
         return '<div class="ticket-logo-svg">' + logoSVG() + '</div>' +
-            '<div class="ticket-nombre">Familia González</div>' +
+            '<div class="ticket-nombre">FAMILIA GONZÁLEZ</div>' +
             '<div class="ticket-fecha">' + escapeHtml(fechaStr) + '</div>' +
             '<div class="ticket-sep-doble"></div>' +
             '<div class="ticket-detalles">' +
@@ -242,7 +263,8 @@
             '<div class="ticket-sep-doble"></div>' +
             '<div class="ticket-total">TOTAL: $' + totalFormatted + '</div>' +
             '<div class="ticket-sep-punto"></div>' +
-            '<div class="ticket-pie">¡Gracias por su preferencia!</div>' +
+            '<div class="ticket-pie">Gracias por su preferencia. ¡Lo esperamos pronto!</div>' +
+            '<div class="ticket-qr-placeholder">Dénos su opinión</div>' +
             '<div class="no-print"><button type="button" onclick="window.print();">🖨 Imprimir</button></div>';
     }
 
@@ -250,7 +272,7 @@
     function buildBodyCotizacionWhatsApp(titulo, detalles, fechaStr, platillos, total) {
         var totalFormatted = Number(total).toLocaleString('es-MX', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
         return '<div class="ticket-logo-svg">' + logoSVG() + '</div>' +
-            '<div class="ticket-nombre">Familia González</div>' +
+            '<div class="ticket-nombre">FAMILIA GONZÁLEZ</div>' +
             '<div class="ticket-fecha">' + escapeHtml(fechaStr) + '</div>' +
             '<div class="ticket-sep-doble"></div>' +
             '<div class="ticket-detalles">' +
@@ -264,14 +286,19 @@
             '<div class="ticket-sep-doble"></div>' +
             '<div class="ticket-total">TOTAL: $' + totalFormatted + '</div>' +
             '<div class="ticket-sep-punto"></div>' +
-            '<div class="ticket-pie">¡Gracias por su preferencia!</div>';
+            '<div class="ticket-pie">Gracias por su preferencia. ¡Lo esperamos pronto!</div>' +
+            '<div class="ticket-qr-placeholder">Dénos su opinión</div>';
     }
 
     // ─── Helpers Firestore ───
     function leerOrden(ordenId, callback) {
         db.collection('ordenes').doc(ordenId).get()
             .then(function (doc) {
-                if (!doc.exists) { alert('No se encontró la orden.'); return; }
+                if (!doc.exists) {
+                    if (typeof window.showToast === 'function') window.showToast('No se encontró la orden.', 'error');
+                    else alert('No se encontró la orden.');
+                    return;
+                }
                 var data = doc.data();
                 var mesa = data.mesa != null ? String(data.mesa) : '—';
                 var meseroNombre = data.meseroNombre != null ? String(data.meseroNombre) : '—';
@@ -286,14 +313,22 @@
             })
             .catch(function (err) {
                 console.error('Error al cargar orden:', err);
-                alert('Error al cargar la orden: ' + (err && err.message ? err.message : err));
+                if (typeof window.showToast === 'function') {
+                    window.showToast('Error al cargar la orden: ' + (err && err.message ? err.message : err), 'error');
+                } else {
+                    alert('Error al cargar la orden: ' + (err && err.message ? err.message : err));
+                }
             });
     }
 
     function leerCotizacion(cotizacionId, callback) {
         db.collection('cotizaciones').doc(cotizacionId).get()
             .then(function (doc) {
-                if (!doc.exists) { alert('No se encontró la cotización.'); return; }
+                if (!doc.exists) {
+                    if (typeof window.showToast === 'function') window.showToast('No se encontró la cotización.', 'error');
+                    else alert('No se encontró la cotización.');
+                    return;
+                }
                 var data = doc.data();
                 var titulo = data.titulo != null ? String(data.titulo) : 'Cotización';
                 var detalles = data.detalles != null ? String(data.detalles) : '—';
@@ -308,7 +343,11 @@
             })
             .catch(function (err) {
                 console.error('Error al cargar cotización:', err);
-                alert('Error al cargar la cotización: ' + (err && err.message ? err.message : err));
+                if (typeof window.showToast === 'function') {
+                    window.showToast('Error al cargar la cotización: ' + (err && err.message ? err.message : err), 'error');
+                } else {
+                    alert('Error al cargar la cotización: ' + (err && err.message ? err.message : err));
+                }
             });
     }
 
@@ -317,28 +356,44 @@
     // ══════════════════════════════════════════
 
     function prepararTicket(ordenId) {
-        if (!ordenId || typeof db === 'undefined') { alert('Recarga la página e intenta de nuevo.'); return; }
+        if (!ordenId || typeof db === 'undefined') {
+            if (typeof window.showToast === 'function') window.showToast('Recarga la página e intenta de nuevo.', 'error');
+            else alert('Recarga la página e intenta de nuevo.');
+            return;
+        }
         leerOrden(ordenId, function (mesa, mesero, fecha, platillos, total) {
             abrirVentanaTicket(buildBodyOrdenPrint(mesa, mesero, fecha, platillos, total));
         });
     }
 
     function enviarWhatsApp(ordenId) {
-        if (!ordenId || typeof db === 'undefined') { alert('Recarga la página e intenta de nuevo.'); return; }
+        if (!ordenId || typeof db === 'undefined') {
+            if (typeof window.showToast === 'function') window.showToast('Recarga la página e intenta de nuevo.', 'error');
+            else alert('Recarga la página e intenta de nuevo.');
+            return;
+        }
         leerOrden(ordenId, function (mesa, mesero, fecha, platillos, total) {
             generarImagenWhatsApp(buildBodyOrdenWhatsApp(mesa, mesero, fecha, platillos, total), 'ticket-mesa-' + mesa + '.png');
         });
     }
 
     function prepararCotizacion(cotizacionId) {
-        if (!cotizacionId || typeof db === 'undefined') { alert('Recarga la página e intenta de nuevo.'); return; }
+        if (!cotizacionId || typeof db === 'undefined') {
+            if (typeof window.showToast === 'function') window.showToast('Recarga la página e intenta de nuevo.', 'error');
+            else alert('Recarga la página e intenta de nuevo.');
+            return;
+        }
         leerCotizacion(cotizacionId, function (titulo, detalles, fecha, platillos, total) {
             abrirVentanaTicket(buildBodyCotizacionPrint(titulo, detalles, fecha, platillos, total));
         });
     }
 
     function enviarWhatsAppCotizacion(cotizacionId) {
-        if (!cotizacionId || typeof db === 'undefined') { alert('Recarga la página e intenta de nuevo.'); return; }
+        if (!cotizacionId || typeof db === 'undefined') {
+            if (typeof window.showToast === 'function') window.showToast('Recarga la página e intenta de nuevo.', 'error');
+            else alert('Recarga la página e intenta de nuevo.');
+            return;
+        }
         leerCotizacion(cotizacionId, function (titulo, detalles, fecha, platillos, total) {
             generarImagenWhatsApp(buildBodyCotizacionWhatsApp(titulo, detalles, fecha, platillos, total), 'cotizacion-' + titulo.substring(0, 20).replace(/\s/g, '-') + '.png');
         });
