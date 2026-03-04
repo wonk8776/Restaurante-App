@@ -20,34 +20,33 @@
 
     <style>
         :root {
-            --color-bg: #F4F6FB;
-            --color-card: #FFFFFF;
-            --color-card-alt: #F0F4FF;
-            --color-sidebar: #0F2D5E;
-            --color-sidebar-active: #1565C0;
-            --color-sidebar-text: #FFFFFF;
-            --color-sidebar-text-muted: rgba(255,255,255,0.65);
-            --color-primary: #1A56DB;
-            --color-primary-light: #E3EEFF;
-            --color-primary-hover: #1447B8;
-            --color-accent: #1976D2;
-            --color-green: #2E7D32;
-            --color-green-light: #E8F5E9;
-            --color-green-action: #388E3C;
-            --color-green-action-hover: #2E7D32;
-            --color-red: #C62828;
-            --color-red-light: #FFEBEE;
-            --color-warning: #F57F17;
-            --color-warning-light: #FFF8E1;
-            --color-text: #1A2744;
-            --color-text-muted: #546E7A;
-            --color-text-dim: #90A4AE;
-            --color-border: #D6E0F0;
-            --color-border-focus: #1565C0;
-            --shadow-xs: 0 1px 3px rgba(26,58,107,0.08);
-            --shadow-sm: 0 2px 8px rgba(26,58,107,0.10);
-            --shadow-md: 0 4px 16px rgba(26,58,107,0.12);
-            --shadow-lg: 0 8px 32px rgba(26,58,107,0.16);
+            --color-bg: #0f172a;
+            --color-surface: #1e293b;
+            --color-card: #1e293b;
+            --color-card-alt: #162032;
+            --color-sidebar: #0c1a2e;
+            --color-primary: #D4AF37;
+            --color-primary-light: rgba(212,175,55,0.12);
+            --color-primary-hover: #c9a227;
+            --color-accent: #D4AF37;
+            --color-green: #22c55e;
+            --color-green-light: rgba(34,197,94,0.12);
+            --color-green-action: #22c55e;
+            --color-green-action-hover: #16a34a;
+            --color-red: #ef4444;
+            --color-red-light: rgba(239,68,68,0.12);
+            --color-warning: #f59e0b;
+            --color-warning-light: rgba(245,158,11,0.12);
+            --color-text: #f1f5f9;
+            --color-text-muted: #94a3b8;
+            --color-text-dim: #64748b;
+            --color-border: rgba(255,255,255,0.08);
+            --color-border-focus: #D4AF37;
+            --color-input-bg: rgba(255,255,255,0.04);
+            --shadow-xs: 0 1px 3px rgba(0,0,0,0.3);
+            --shadow-sm: 0 2px 8px rgba(0,0,0,0.4);
+            --shadow-md: 0 4px 16px rgba(0,0,0,0.5);
+            --shadow-lg: 0 8px 32px rgba(0,0,0,0.6);
             --radius-sm: 8px;
             --radius-md: 12px;
             --radius-lg: 16px;
@@ -87,7 +86,7 @@
 
         /* Header mesero */
         header {
-            background: #0C1A2E !important;
+            background: var(--color-sidebar) !important;
             height: 56px;
             padding: 0 20px !important;
             border-bottom: none !important;
@@ -128,7 +127,7 @@
         }
         .header-right { display: flex; align-items: center; gap: 1rem; }
         main {
-            background: #F7F8FA;
+            background: var(--color-bg);
             padding: 20px;
             max-width: 1400px;
             margin: 0 auto;
@@ -136,7 +135,7 @@
         main h2 {
             font-size: 15px;
             font-weight: 700;
-            color: #0F172A;
+            color: var(--color-text);
             margin-bottom: 12px;
         }
         .tables-grid {
@@ -147,53 +146,53 @@
         .table-btn {
             height: 56px;
             min-height: 56px;
-            background: #FFFFFF;
-            border: 1.5px solid #E2E8F0;
+            background: var(--color-card);
+            border: 1.5px solid var(--color-border);
             border-radius: 10px;
             font-size: 13px;
             font-weight: 600;
-            color: #0F172A;
+            color: var(--color-text);
             cursor: pointer;
             transition: all 150ms ease;
         }
         .table-btn:hover {
-            border-color: #93C5FD;
-            background: #EFF6FF;
-            color: #1D4ED8;
+            border-color: var(--color-primary);
+            background: var(--color-primary-light);
+            color: var(--color-primary);
         }
         .table-btn.has-order {
-            border-color: #86EFAC;
-            background: #F0FDF4;
-            color: #15803D;
+            border-color: var(--color-green);
+            background: var(--color-green-light);
+            color: var(--color-green);
         }
         .table-btn.selected, .table-btn.active {
-            border-color: #2563EB;
-            background: #EFF6FF;
-            color: #2563EB;
-            box-shadow: 0 0 0 3px rgba(37,99,235,0.15);
+            border-color: var(--color-primary);
+            background: var(--color-primary-light);
+            color: var(--color-primary);
+            box-shadow: 0 0 0 3px rgba(212,175,55,0.2);
         }
 
         .table-btn.mesa-propia {
-            border-color: #2E7D32 !important;
-            background: #E8F5E9 !important;
-            color: #2E7D32 !important;
+            border-color: var(--color-green) !important;
+            background: var(--color-green-light) !important;
+            color: var(--color-green) !important;
         }
         .table-btn.mesa-propia::after {
             content: ' ●';
             font-size: 0.55rem;
             vertical-align: super;
-            color: #2E7D32;
+            color: var(--color-green);
         }
         .table-btn.mesa-ocupada-otro {
-            border-color: #1565C0 !important;
-            background: #E3EEFF !important;
-            color: #1565C0 !important;
+            border-color: var(--color-primary) !important;
+            background: var(--color-primary-light) !important;
+            color: var(--color-primary) !important;
         }
         .table-btn.mesa-ocupada-otro::after {
             content: ' ●';
             font-size: 0.55rem;
             vertical-align: super;
-            color: #1565C0;
+            color: var(--color-primary);
         }
 
         /* Modal: estilos globales en estilos.css (glassmorphism, slide-up, cierre minimalista). Solo ajustes responsive aquí. */
@@ -337,8 +336,8 @@
             min-width: 44px;
             min-height: 44px;
             border-radius: 50%;
-            background: var(--color-green-action);
-            color: #FFFFFF;
+            background: var(--color-primary);
+            color: #0f172a;
             border: none;
             font-size: 1.25rem;
             cursor: pointer;
@@ -346,11 +345,11 @@
             align-items: center;
             justify-content: center;
             transition: transform 0.2s, background 0.3s, box-shadow 0.2s;
-            box-shadow: var(--shadow-sm);
+            box-shadow: 0 2px 8px rgba(212,175,55,0.3);
         }
 
         .btn-add:hover {
-            background: var(--color-green-action-hover);
+            background: var(--color-primary-hover);
             transform: scale(1.08);
         }
 
@@ -408,12 +407,12 @@
         .btn-send {
             width: 100%;
             padding: 14px;
-            background: #2563EB;
-            color: #FFFFFF;
+            background: var(--color-primary);
+            color: #0f172a;
             border: none;
             border-radius: 8px;
             font-weight: 700;
-            box-shadow: 0 2px 8px rgba(37,99,235,0.3);
+            box-shadow: 0 2px 8px rgba(212,175,55,0.3);
             transition: all 0.15s ease;
             font-size: 1rem;
             cursor: pointer;
@@ -421,8 +420,8 @@
         }
 
         .btn-send:hover {
-            background: #1D4ED8;
-            box-shadow: 0 4px 16px rgba(37,99,235,0.4);
+            background: var(--color-primary-hover);
+            box-shadow: 0 4px 16px rgba(212,175,55,0.4);
             transform: translateY(-1px);
         }
 
@@ -441,8 +440,8 @@
             bottom: 2rem;
             left: 50%;
             transform: translateX(-50%) translateY(100px);
-            background: #0F172A;
-            color: #FFFFFF;
+            background: var(--color-surface);
+            color: var(--color-text);
             padding: 12px 20px;
             border-radius: 10px;
             font-size: 14px;
@@ -470,15 +469,15 @@
         }
 
         .order-card {
-            background: #FFFFFF;
+            background: var(--color-card);
             border-radius: 12px;
-            border: 1px solid #E2E8F0;
+            border: 1px solid var(--color-border);
             padding: 16px;
             margin-bottom: 12px;
         }
 
         .order-card:hover {
-            border-color: #E2E8F0;
+            border-color: var(--color-border);
         }
 
         .order-card-header {
@@ -491,13 +490,19 @@
         .order-card-mesa {
             font-size: 15px;
             font-weight: 700;
-            color: #2563EB;
+            color: var(--color-primary);
         }
 
         .order-card-total {
-            font-size: 15px;
+            font-size: 1rem;
             font-weight: 700;
-            color: #16A34A;
+            color: var(--color-green);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding-top: 0.75rem;
+            margin-top: 0.5rem;
+            border-top: 1px solid var(--color-border);
         }
 
         .order-card-estado {
@@ -518,7 +523,7 @@
         }
 
         .estado-pendiente { background: var(--color-warning-light); color: var(--color-warning); border-radius: var(--radius-pill); border: 1px solid rgba(245,127,23,0.3); }
-        .estado-preparacion { background: var(--color-primary-light); color: var(--color-primary); border-radius: var(--radius-pill); border: 1px solid rgba(21,101,192,0.3); }
+        .estado-preparacion { background: var(--color-primary-light); color: var(--color-primary); border-radius: var(--radius-pill); border: 1px solid rgba(212,175,55,0.3); }
         .estado-listo { background: var(--color-green-light); color: var(--color-green); border-radius: var(--radius-pill); border: 1px solid rgba(46,125,50,0.3); }
         .estado-entregado { background: var(--color-green-light); color: var(--color-green-action); border-radius: var(--radius-pill); border: 1px solid rgba(56,142,60,0.4); }
 
@@ -586,11 +591,7 @@
 
         /* Botones WhatsApp e Imprimir en mis órdenes */
         .order-card-actions {
-            display: flex;
-            flex-wrap: wrap;
-            gap: 0.5rem;
-            margin-top: 0.5rem;
-            align-items: center;
+            display: none;
         }
         .btn-whatsapp-mesero {
             padding: 8px 14px;
@@ -602,6 +603,8 @@
             border-radius: 4px;
             cursor: pointer;
             transition: background 0.2s, color 0.2s;
+            margin-left: auto;
+            flex-shrink: 0;
         }
         .btn-whatsapp-mesero:hover {
             background: rgba(37, 211, 102, 0.35);
@@ -725,34 +728,34 @@
             justify-content: center;
         }
         .btn-qty.btn-qty-mas {
-            background: #1565C0;
-            color: #FFFFFF;
+            background: var(--color-primary);
+            color: #0f172a;
             border: none;
             transition: background 0.2s, transform 0.1s;
         }
         .btn-qty.btn-qty-mas:hover {
-            background: #0D47A1;
+            background: var(--color-primary-hover);
         }
         .btn-qty.btn-qty-mas:active {
             transform: scale(0.95);
         }
         .btn-qty.btn-qty-menos {
-            background: #FFFFFF;
-            color: #1565C0;
-            border: 2px solid #1565C0;
+            background: transparent;
+            color: var(--color-primary);
+            border: 2px solid var(--color-primary);
             transition: all 0.2s;
         }
         .btn-qty.btn-qty-menos:hover {
-            background: #E3EEFF;
+            background: var(--color-primary-light);
         }
         .btn-eliminar-platillo {
             width: 32px;
             height: 32px;
             min-width: 32px;
             border-radius: 50%;
-            border: 1.5px solid rgba(198,40,40,0.3);
-            background: #FFEBEE;
-            color: #C62828;
+            border: 1.5px solid rgba(239,68,68,0.3);
+            background: var(--color-red-light);
+            color: var(--color-red);
             font-size: 0.85rem;
             font-weight: 700;
             cursor: pointer;
@@ -762,8 +765,8 @@
             transition: all 0.2s;
         }
         .btn-eliminar-platillo:hover {
-            background: #C62828;
-            color: #FFFFFF;
+            background: var(--color-red);
+            color: var(--color-text);
         }
 
         .orders-filter {
@@ -780,7 +783,7 @@
         }
         .orders-filter input[type="date"] {
             padding: 8px 12px;
-            background: #FFFFFF;
+            background: var(--color-input-bg);
             border: 1.5px solid var(--color-border);
             border-radius: var(--radius-sm);
             color: var(--color-text);
@@ -791,11 +794,58 @@
         .orders-filter input[type="date"]:focus {
             outline: none;
             border-color: var(--color-border-focus);
-            box-shadow: 0 0 0 3px rgba(21,101,192,0.12);
+            box-shadow: 0 0 0 3px rgba(212,175,55,0.12);
         }
         .ordenes-count {
             color: var(--color-text-muted);
             font-size: 0.85rem;
+        }
+        .toast-add {
+            position: fixed;
+            top: 70px;
+            left: 50%;
+            transform: translateX(-50%) translateY(-20px);
+            background: var(--color-primary);
+            color: #0f172a;
+            padding: 10px 20px;
+            border-radius: var(--radius-pill);
+            font-size: 0.85rem;
+            font-weight: 700;
+            z-index: 9999;
+            opacity: 0;
+            pointer-events: none;
+            transition: all 0.25s ease;
+            white-space: nowrap;
+            box-shadow: 0 4px 16px rgba(212,175,55,0.4);
+            max-width: 90vw;
+            text-align: center;
+        }
+        .toast-add.show {
+            opacity: 1;
+            transform: translateX(-50%) translateY(0);
+        }
+        @media (max-width: 768px) {
+            .menu-cards-grid {
+                display: grid !important;
+                grid-template-columns: 1fr 1fr !important;
+                gap: 0.75rem !important;
+            }
+            .product-card-image-wrap,
+            .product-card-placeholder {
+                height: 80px !important;
+            }
+            .product-card-name {
+                font-size: 0.8rem !important;
+            }
+            .product-card-meta {
+                font-size: 0.7rem !important;
+            }
+            .product-card-price {
+                font-size: 0.85rem !important;
+            }
+        }
+        .btn-agregar-mas {
+            margin-left: 1rem !important;
         }
     </style>
 </head>
@@ -1046,8 +1096,7 @@
                             '<span class="order-card-mesa">Mesa ' + (o.mesa || '—') + '</span>' +
                             '<span class="order-card-estado ' + estadoClass + '">' + (o.estado || 'pendiente') + '</span></div>' +
                             '<div class="order-card-platillos">' + platillosHtml + '</div>' +
-                            '<div class="order-card-total">Total: $' + (typeof o.total === 'number' ? o.total.toFixed(2) : '0.00') + '</div>' +
-                            '<div class="order-card-actions">' + botonesAcciones + '</div>';
+                            '<div class="order-card-total"><span>Total: $' + (typeof o.total === 'number' ? o.total.toFixed(2) : '0.00') + '</span>' + botonesAcciones + '</div>';
                         myOrdersList.appendChild(card);
 
                         card.querySelector('.btn-whatsapp-mesero').addEventListener('click', function () {
@@ -1362,6 +1411,16 @@
                 }
                 order[id].qty++;
                 updateOrderSummary();
+                // Toast de confirmación
+                var ta = document.getElementById('toastAdd');
+                if (ta) {
+                    ta.textContent = '+ ' + name + '  ×' + order[id].qty;
+                    ta.classList.add('show');
+                    clearTimeout(ta._timer);
+                    ta._timer = setTimeout(function() {
+                        ta.classList.remove('show');
+                    }, 1500);
+                }
             }
 
             function updateOrderSummary() {
@@ -1529,6 +1588,7 @@
             navigator.serviceWorker.register('/sw.js').catch(function (err) { console.warn('SW no registrado:', err); });
         }
     </script>
+<div class="toast-add" id="toastAdd"></div>
 </body>
 
 </html>

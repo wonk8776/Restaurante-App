@@ -180,6 +180,26 @@
                 <div class="spinner"></div>
             </button>
 
+            <div style="text-align:center; margin-top: 0.75rem;">
+                <span style="font-size:0.75rem; color: var(--color-text-muted);">— o —</span>
+            </div>
+            <button type="button" id="btnDemo" style="
+                width: 100%;
+                margin-top: 0.75rem;
+                padding: 12px;
+                background: transparent;
+                border: 1.5px solid var(--color-primary);
+                color: var(--color-primary);
+                border-radius: 8px;
+                font-size: 0.95rem;
+                font-weight: 600;
+                cursor: pointer;
+                transition: all 0.2s;
+                font-family: var(--font-body);
+            ">
+                Ver demo →
+            </button>
+
             <button
                 type="button"
                 id="btnInstall"
@@ -232,6 +252,29 @@
                 btnInstall.style.display = 'none';
             });
         })();
+
+        var btnDemo = document.getElementById('btnDemo');
+        if (btnDemo) {
+            btnDemo.addEventListener('mouseenter', function() {
+                this.style.background = 'var(--color-primary)';
+                this.style.color = '#0f172a';
+            });
+            btnDemo.addEventListener('mouseleave', function() {
+                this.style.background = 'transparent';
+                this.style.color = 'var(--color-primary)';
+            });
+            btnDemo.addEventListener('click', function() {
+                var emailInput = document.getElementById('email') ||
+                                 document.querySelector('input[type="email"]');
+                var passInput = document.getElementById('password') ||
+                                document.querySelector('input[type="password"]');
+                var submitBtn = document.getElementById('loginBtn') ||
+                                document.querySelector('button[type="submit"]');
+                if (emailInput) emailInput.value = 'demo@restiq.com';
+                if (passInput) passInput.value = 'demo1234';
+                if (submitBtn) submitBtn.click();
+            });
+        }
     </script>
 </body>
 

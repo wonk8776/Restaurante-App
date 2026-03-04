@@ -132,6 +132,7 @@
             }
         }
     }
+    window.mostrarSeccion = mostrarSeccion;
 
     navLinks.forEach(function (a) {
         a.addEventListener('click', function (e) {
@@ -740,6 +741,11 @@
     function hoy() {
         return new Date();
     }
+    function ayer() {
+        var d = new Date();
+        d.setDate(d.getDate() - 1);
+        return d;
+    }
 
     // --- Dashboard: ventas, gastos, ganancia, órdenes activas (tiempo real) ---
     function aplicarTransicionValor(el) {
@@ -767,6 +773,20 @@
                 }
                 window._ventasDia = total;
                 actualizarGananciaDashboard();
+                var ayerInicio = firebase.firestore.Timestamp.fromDate(inicioDelDia(ayer()));
+                var ayerFin = firebase.firestore.Timestamp.fromDate(finDelDia(ayer()));
+                db.collection('ventas').where('timestamp', '>=', ayerInicio).where('timestamp', '<=', ayerFin).get().then(function (res) {
+                    var totalAyer = 0;
+                    res.forEach(function (d) { totalAyer += (d.data().total || 0); });
+                    window._ventasAyer = totalAyer;
+                    var trendEl = document.getElementById('ventasDiaTrend');
+                    if (trendEl) {
+                        if (total > totalAyer) trendEl.setAttribute('data-dir', 'up');
+                        else if (total < totalAyer) trendEl.setAttribute('data-dir', 'down');
+                        else trendEl.setAttribute('data-dir', 'neutral');
+                    }
+                    actualizarGananciaDashboard();
+                });
             });
 
         db.collection('gastos').where('fecha', '>=', hoyInicio).where('fecha', '<=', hoyFin)
@@ -781,6 +801,20 @@
                 }
                 window._gastosDia = total;
                 actualizarGananciaDashboard();
+                var ayerInicio = firebase.firestore.Timestamp.fromDate(inicioDelDia(ayer()));
+                var ayerFin = firebase.firestore.Timestamp.fromDate(finDelDia(ayer()));
+                db.collection('gastos').where('fecha', '>=', ayerInicio).where('fecha', '<=', ayerFin).get().then(function (res) {
+                    var totalAyer = 0;
+                    res.forEach(function (d) { totalAyer += (d.data().monto || 0); });
+                    window._gastosAyer = totalAyer;
+                    var trendEl = document.getElementById('gastosDiaTrend');
+                    if (trendEl) {
+                        if (total > totalAyer) trendEl.setAttribute('data-dir', 'up');
+                        else if (total < totalAyer) trendEl.setAttribute('data-dir', 'down');
+                        else trendEl.setAttribute('data-dir', 'neutral');
+                    }
+                    actualizarGananciaDashboard();
+                });
             });
 
         db.collection('ordenes').onSnapshot(function (snap) {
@@ -968,6 +1002,16 @@
         if (gananciaNetaEl) {
             gananciaNetaEl.textContent = formatearDinero(gan);
             aplicarTransicionValor(gananciaNetaEl);
+        }
+        var ventasAyer = window._ventasAyer != null ? window._ventasAyer : null;
+        var gastosAyer = window._gastosAyer != null ? window._gastosAyer : null;
+        var ganAyer = (ventasAyer != null && gastosAyer != null) ? Math.max(0, ventasAyer - gastosAyer) : null;
+        var trendEl = document.getElementById('gananciaNetaTrend');
+        if (trendEl) {
+            if (ganAyer === null) trendEl.setAttribute('data-dir', 'neutral');
+            else if (gan > ganAyer) trendEl.setAttribute('data-dir', 'up');
+            else if (gan < ganAyer) trendEl.setAttribute('data-dir', 'down');
+            else trendEl.setAttribute('data-dir', 'neutral');
         }
     }
 
@@ -1810,7 +1854,8 @@
 
     function setReporteRango(rango) {
         var now = new Date();
-        var hoy = now.toISOString().slice(0, 10);
+        var pad = function(n) { return n < 10 ? '0' + n : '' + n; };
+        var hoy = now.getFullYear() + '-' + pad(now.getMonth() + 1) + '-' + pad(now.getDate());
         if (rango === 'hoy') {
             if (reporteDesde) reporteDesde.value = hoy;
             if (reporteHasta) reporteHasta.value = hoy;
@@ -1818,11 +1863,13 @@
             var lunes = new Date(now);
             var d = now.getDay();
             lunes.setDate(now.getDate() - (d === 0 ? 6 : d - 1));
-            if (reporteDesde) reporteDesde.value = lunes.toISOString().slice(0, 10);
+            var lunesStr = lunes.getFullYear() + '-' + pad(lunes.getMonth() + 1) + '-' + pad(lunes.getDate());
+            if (reporteDesde) reporteDesde.value = lunesStr;
             if (reporteHasta) reporteHasta.value = hoy;
         } else if (rango === 'mes') {
             var primerDia = new Date(now.getFullYear(), now.getMonth(), 1);
-            if (reporteDesde) reporteDesde.value = primerDia.toISOString().slice(0, 10);
+            var primerDiaStr = primerDia.getFullYear() + '-' + pad(primerDia.getMonth() + 1) + '-' + pad(primerDia.getDate());
+            if (reporteDesde) reporteDesde.value = primerDiaStr;
             if (reporteHasta) reporteHasta.value = hoy;
         }
         [reporteQuickHoy, reporteQuickSemana, reporteQuickMes].forEach(function (btn) {
@@ -1834,6 +1881,7 @@
     if (reporteQuickHoy) reporteQuickHoy.addEventListener('click', function () { setReporteRango('hoy'); });
     if (reporteQuickSemana) reporteQuickSemana.addEventListener('click', function () { setReporteRango('semana'); });
     if (reporteQuickMes) reporteQuickMes.addEventListener('click', function () { setReporteRango('mes'); });
+    setReporteRango('hoy');
 
     function filtrarReporte() {
         var desde = reporteDesde && reporteDesde.value ? reporteDesde.value : '';

@@ -3337,3 +3337,188 @@ main.content:has(#section-cotizaciones.active) {
     color: var(--color-primary);
     margin-bottom: 1rem;
 }
+
+/* ── Dashboard: spans de tendencia (ventasDiaTrend, gastosDiaTrend, gananciaNetaTrend) ── */
+.card-trend {
+    font-size: 0.78rem;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.35rem;
+    color: var(--color-text-muted);
+}
+.card-trend[data-dir="up"] {
+    color: #22c55e;
+}
+.card-trend[data-dir="down"] {
+    color: #ef4444;
+}
+.card-trend[data-dir="neutral"] {
+    color: var(--color-text-muted);
+}
+
+/* ── MOBILE: tablas responsive con data-label ── */
+@media (max-width: 640px) {
+
+    /* Pedidos: ocultar header, apilar celdas */
+    #section-pedidos .pedidos-table thead {
+        display: none !important;
+    }
+    #section-pedidos .pedidos-table tr {
+        display: flex !important;
+        flex-wrap: wrap !important;
+        gap: 0.5rem !important;
+        padding: 0.75rem !important;
+        border-bottom: 1px solid var(--color-border) !important;
+        align-items: center !important;
+    }
+    #section-pedidos .pedidos-table td {
+        display: flex !important;
+        align-items: center !important;
+        padding: 0 !important;
+        border: none !important;
+    }
+    /* Platillo ocupa todo el ancho */
+    #section-pedidos .pedidos-table td:first-child {
+        width: 100% !important;
+        flex: 1 1 100% !important;
+    }
+    /* Precio, cantidad, subtotal en fila */
+    #section-pedidos .pedidos-table td:nth-child(2),
+    #section-pedidos .pedidos-table td:nth-child(3),
+    #section-pedidos .pedidos-table td:nth-child(4) {
+        flex: 1 !important;
+    }
+    /* Botón X al final de la fila */
+    #section-pedidos .pedidos-table td:last-child {
+        flex: 0 0 auto !important;
+    }
+    #section-pedidos .pedidos-table .input-tabla,
+    #section-pedidos .pedidos-table select {
+        width: 100% !important;
+        min-width: 0 !important;
+    }
+
+    /* Cotizaciones form: tabla interna */
+    #section-cotizaciones .table-wrap table thead {
+        display: none !important;
+    }
+    #section-cotizaciones .table-wrap table tr {
+        display: flex !important;
+        flex-wrap: wrap !important;
+        gap: 0.5rem !important;
+        padding: 0.75rem !important;
+        border-bottom: 1px solid var(--color-border) !important;
+    }
+    #section-cotizaciones .table-wrap table td {
+        display: flex !important;
+        padding: 0 !important;
+        border: none !important;
+        align-items: center !important;
+    }
+    #section-cotizaciones .table-wrap table td:first-child {
+        flex: 1 1 100% !important;
+    }
+    #section-cotizaciones .table-wrap table td:nth-child(2),
+    #section-cotizaciones .table-wrap table td:nth-child(3),
+    #section-cotizaciones .table-wrap table td:nth-child(4) {
+        flex: 1 !important;
+    }
+    #section-cotizaciones .table-wrap table td:last-child {
+        flex: 0 0 auto !important;
+    }
+
+    /* Gastos historial: scroll horizontal como fallback */
+    @media (max-width: 640px) {
+        #section-gastos .table-wrap {
+            overflow-x: auto !important;
+            -webkit-overflow-scrolling: touch !important;
+        }
+        #section-gastos table {
+            min-width: 420px !important;
+        }
+        /* Ocultar columnas menos críticas en mobile */
+        #section-gastos table th:nth-child(5),
+        #section-gastos table td:nth-child(5) {
+            display: none !important;
+        }
+        #section-gastos table th:nth-child(6),
+        #section-gastos table td:nth-child(6) {
+            display: none !important;
+        }
+    }
+
+    /* Reportes: botones de filtro en wrap */
+    #section-reportes .reportes-toolbar,
+    #section-reportes .section-toolbar {
+        flex-wrap: wrap !important;
+        gap: 0.5rem !important;
+    }
+    #section-reportes .btn[id="btnExportarReporte"],
+    #section-reportes button[id="btnExportarReporte"] {
+        width: 100% !important;
+    }
+
+    /* Meseros: grid en 1 columna mobile */
+    #meserosGrid {
+        grid-template-columns: 1fr !important;
+        border: none !important;
+        outline: none !important;
+    }
+}
+
+@media (max-width: 640px) {
+
+    /* Evitar que cualquier elemento se salga del viewport */
+    #section-gastos,
+    #section-reportes {
+        overflow-x: hidden !important;
+        width: 100% !important;
+    }
+
+    /* Inputs y selects de Gastos al 100% */
+    #section-gastos .form-group input,
+    #section-gastos .form-group select {
+        max-width: 100% !important;
+        width: 100% !important;
+        box-sizing: border-box !important;
+    }
+
+    /* Botón Registrar gasto al 100% */
+    #section-gastos .btn {
+        max-width: 100% !important;
+        width: 100% !important;
+        box-sizing: border-box !important;
+    }
+
+    /* Reportes: toolbar wrap y botones al 100% */
+    #section-reportes .reportes-filtros,
+    #section-reportes > div:first-child {
+        flex-wrap: wrap !important;
+        width: 100% !important;
+    }
+
+    #section-reportes input[type="date"] {
+        max-width: 100% !important;
+        width: 100% !important;
+        box-sizing: border-box !important;
+    }
+
+    /* Exportar PDF en su propia línea */
+    #btnExportarReporte {
+        width: 100% !important;
+        margin-top: 0.25rem !important;
+    }
+
+    /* KPI cards de reportes sin desbordarse */
+    #section-reportes .reportes-kpis,
+    #section-reportes .resumen-cards {
+        width: 100% !important;
+        box-sizing: border-box !important;
+    }
+
+    /* Global: nada se sale del viewport */
+    * {
+        max-width: 100vw !important;
+        box-sizing: border-box !important;
+    }
+}
