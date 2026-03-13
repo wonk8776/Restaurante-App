@@ -114,22 +114,23 @@ function checkUserRole(uid) {
 // Nota: Como login.html es la entrada, esto podría usarse en otras páginas para redirigir al login
 // Listener de estado de autenticación
 auth.onAuthStateChanged((user) => {
-    // Determinar si estamos en la página de login (o raíz)
-    const isLoginPage = window.location.pathname.endsWith('login.html') ||
-        document.getElementById('loginForm') !== null;
+    var paginasPublicas = ['login.html', 'cocina.html'];
+    var esPublica = paginasPublicas.some(function (p) {
+        return window.location.pathname.includes(p);
+    });
+
+    // Mantener compatibilidad: login.html detectado por formulario también es pública
+    if (document.getElementById('loginForm') !== null) {
+        esPublica = true;
+    }
 
     if (user) {
-        // Usuario autenticado
-        if (isLoginPage) {
-            // Si está en login y ya tiene sesión, verificar rol y redirigir
+        if (!user.isAnonymous && esPublica && document.getElementById('loginForm') !== null) {
             console.log('Sesión activa detectada en login. Verificando rol...');
             checkUserRole(user.uid);
         }
-        // Si está en otra página, dejamos que permanezca (ya está autenticado)
     } else {
-        // Usuario NO autenticado
-        if (!isLoginPage) {
-            // Si está protegiendo una página interna y no hay sesión, al login
+        if (!esPublica) {
             console.log('Sin sesión activa. Redirigiendo a login...');
             window.location.href = 'login.html';
         }

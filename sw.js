@@ -3,6 +3,7 @@ const STATIC_ASSETS = [
   'index.html',
   'mesero.html',
   'login.html',
+  'cocina.html',
   'firebase-config.js',
   'auth.js',
   'app.js',

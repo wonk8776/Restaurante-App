@@ -1,239 +1,254 @@
 # Reporte: PWA de Contabilidad — Restaurante Pro (Familia González)
 
-Este documento describe **qué se construyó**, **para qué sirve** y **cómo funciona** el sistema desde dos perspectivas: **técnica** (para desarrolladores e ingenieros: estructura, construcción y flujo del programa) y **orientada al cliente** (utilidad para el negocio y qué puede hacer con la aplicación). La app está personalizada con la marca **Familia González** en admin, mesero, login, tickets e impresiones.
+---
+
+## Uso de este documento para IA (Cursor u otra)
+
+**Este archivo es la fuente principal de contexto del proyecto.** Una IA (por ejemplo Cursor) que lo lea tiene visión completa del sistema sin necesidad de explorar todo el código: arquitectura, flujos de datos, IDs y clases clave, estructura Firestore, convenciones y relación entre archivos. Úsalo como onboarding técnico y como referencia al hacer cambios o debugging.
+
+El documento combina:
+1. **Perspectiva técnica** — Cómo está construido (stack, arquitectura, flujos, estructura de archivos).
+2. **Perspectiva cliente** — Para qué sirve y qué puede hacer el negocio con la app.
+3. **Contexto para IA** — Flujos paso a paso, elementos DOM importantes, modelos de datos y convenciones de código.
 
 ---
 
 ## 1. Perspectiva técnica (para programadores)
 
-### Objetivo de esta sección
-
-Proporcionar una **estructura clara del sistema** a nivel de ingeniería: cómo está construido el programa, qué tecnologías se usan, cómo fluyen los datos y cómo se organizan los archivos para mantenimiento o ampliación.
-
 ### ¿Qué se construyó?
 
-Una **Progressive Web App (PWA)** de gestión y contabilidad para restaurante con dos interfaces: **panel de administración** y **panel de mesero**. El backend es **Firebase** (Auth + Firestore); no hay servidor propio. La lógica está en **JavaScript vanilla** (IIFE, sin frameworks).
+Una **Progressive Web App (PWA)** de gestión y contabilidad para restaurante con **dos interfaces**: panel de administración y panel de mesero. Backend: **Firebase** (Auth + Firestore). Sin servidor propio. Lógica en **JavaScript vanilla** (IIFE, sin frameworks).
 
 ### Stack tecnológico
 
 | Capa | Tecnología |
 |------|------------|
 | **Frontend** | HTML5, CSS3 (variables CSS, Grid, Flexbox), JavaScript ES5/ES6 (vanilla) |
-| **Backend / BBDD** | Firebase: **Authentication** (email/contraseña), **Firestore** (NoSQL, tiempo real) |
-| **PWA** | `manifest.json` (standalone, theme, icons), **Service Worker** (`sw.js`: Network First, exclusión de APIs Firebase) |
-| **Gráficos** | Chart.js (ingresos/gastos últimos 7 días en el dashboard) |
-| **Notificaciones** | `toasts.js` (toast tipo success/error/info; sustituye `alert`) |
-| **Hosting** | Vercel: `vercel.json` con headers para `service-worker.js` y `manifest.json` |
+| **Backend / BBDD** | Firebase: Authentication (email/contraseña), Firestore (NoSQL, tiempo real) |
+| **PWA** | `manifest.json`, Service Worker `sw.js` (Network First, exclusión Firebase) |
+| **Gráficos** | Chart.js (ingresos/gastos últimos 7 días, dashboard) |
+| **Notificaciones** | `toasts.js`: `showToast(message, type)` — success, error, info |
+| **Tickets** | `ticket.js`: impresión 58 mm, PNG para WhatsApp (html2canvas) |
+| **Hosting** | Vercel: `vercel.json` (headers para SW y manifest) |
 
-### Arquitectura y ciclo de datos
+### Arquitectura en una frase
 
-- **Entrada única:** `login.html` → Firebase Auth (`signInWithEmailAndPassword`). Tras el login se consulta Firestore `usuarios/{uid}` para el campo `rol` (`admin` o `mesero`).
-- **Redirección por rol:** `auth.js` → si `rol === 'admin'` → `index.html`; si `rol === 'mesero'` → `mesero.html`.
-- **Panel admin (`index.html` + `app.js`):** SPA con navegación por `data-section`; una sola sección visible (`.section.active`). Sin router; todo en un solo HTML. Usa `toasts.js` para feedback (éxito, error, info) y `ticket.js` para tickets e impresión.
-- **Panel mesero (`mesero.html`):** Página independiente que lee `menu` y `configuracion/mesas`, escribe en `ordenes` y puede actualizar órdenes existentes (agregar platillos, enviar por WhatsApp). Incluye un bloque `<style>` propio con tema **dark/dorado** alineado al diseño del admin (variables CSS, botones, cards, toast de confirmación al agregar ítem). Responsive: grid de menú 2 columnas en móvil, total y botón WhatsApp en la misma fila por orden.
-- **Tiempo real:** Firestore `onSnapshot` en colecciones críticas: `ordenes`, `ventas`, `gastos`, `menu`, `usuarios` (meseros), `configuracion`. El dashboard (ventas del día, gastos del día, ganancia, órdenes activas) se actualiza sin recargar.
-- **Flujo orden → venta:** En admin, al marcar una orden como "Pagada" se elige método de pago; se escribe un documento en `ventas` y la orden se actualiza a `estado: 'pagada'` o se elimina según la lógica del código.
-
-### Colecciones Firestore utilizadas
-
-- **`usuarios`** — Documentos por `uid`; campos: `rol` (admin/mesero), `nombre`, `email`. Los meseros se listan con `where('rol', '==', 'mesero')`.
-- **`menu`** — Platillos: `nombre`, `precio`, `categoria`.
-- **`ordenes`** — Órdenes activas/histórico: `mesa`, `platillos[]`, `total`, `estado`, `timestamp`, `meseroId`, `meseroNombre`, etc.
-- **`ventas`** — Ventas cerradas: `timestamp`, `total`, `platillos`, `mesa`, `meseroNombre`, etc.
-- **`gastos`** — Gastos del negocio: `fecha`, `descripcion`, `categoria`, `monto`, `metodoPago`.
-- **`cotizaciones`** — Cotizaciones (pedidos presupuestados): estructura similar a órdenes con `timestamp`, detalles, total.
-- **`configuracion/mesas`** — Documento único con configuración de mesas para el panel del mesero.
-
-### Lógica de negocio relevante
-
-- **Dashboard:** Ventas del día y gastos del día con consultas Firestore por rango de fechas; ganancia neta = ventas − gastos. Órdenes activas = conteo de órdenes con estado distinto de `pagada`/`cancelada`.
-- **Reportes:** Filtro por fechas "Desde/Hasta" sobre `ventas` y `gastos`; totales y listados; "Exportar PDF" abre una ventana con HTML generado (resumen + tablas) para imprimir o guardar como PDF desde el navegador.
-- **Reporte semanal:** Rango lunes–domingo de la semana actual; agregaciones por día, mesero y platillo (más vendido, top 5); hora pico y mesa más activa; salida en pantalla e impresión con estilos `print-reporte-semanal`.
-- **Mantenimiento:** Búsqueda por período y eliminación por período en `ordenes`, `cotizaciones`, `gastos` con confirmaciones y escritura explícita "CONFIRMAR" para evitar borrados accidentales; uso de batches para eliminar en lotes (límite Firestore).
-- **Tickets:** `ticket.js` obtiene la orden por ID desde Firestore, genera HTML de ticket (58 mm para impresión estándar) y dispara `window.print()`. En `mesero.html` existe además un contenedor para impresión térmica 80 mm con estilos en `@media print` dentro del mismo archivo.
-
-### Diseño visual (estilos)
-
-- **`estilos.css`:** Sistema de diseño global (variables `:root`: fondos oscuros, acento dorado `#D4AF37`, tipografía Inter / DM Serif Display, sombras, radios). Usado por `index.html`, `login.html` y `mesero.html`.
-- **`mesero.html`:** Incluye un bloque `<style>` al final del `<head>` que redefine variables y componentes para mantener el mismo tema dark/dorado (botones de mesa, enviar orden, cantidad, cards de órdenes, toast de confirmación al agregar platillo, grid de menú responsive, etc.) sin depender solo de `estilos.css` para la vista mesero.
-
-### Service Worker y PWA
-
-- **Estrategia:** Network First: petición a red primero; si falla, se sirve desde caché.
-- **Exclusiones:** Las peticiones a dominios de Firebase (Firestore, Auth, etc.) no se cachean; siempre se pasan a la red.
-- **Assets estáticos:** En `sw.js` se precachean `index.html`, `mesero.html`, `login.html`, `firebase-config.js`, `auth.js`, `app.js` e iconos PWA (192/512). En `activate` se limpian cachés antiguos y se usa `skipWaiting`/`clients.claim`.
-- **Manifest:** Nombre "Familia González", `short_name` "Fam. González", descripción del panel y operación, `display: standalone`, `theme_color` y `background_color`, iconos 192 y 512.
-
-### Seguridad y consideraciones
-
-- Las reglas de Firestore deben restringir lectura/escritura por `auth.uid` y/o rol (por ejemplo, solo admin puede escribir en `usuarios` o en `gastos`); el código asume que Firebase valida.
-- Las credenciales están en `firebase-config.js` (frontend); en producción es recomendable proteger con reglas y, si aplica, restringir dominios en la consola de Firebase.
-
-### Resumen técnico en una frase
-
-*Se construyó una PWA con HTML/CSS/JS vanilla que usa Firebase Auth para roles (admin/mesero) y Firestore en tiempo real para menú, órdenes, ventas, gastos y cotizaciones, con Service Worker Network First, sistema de toasts, reportes por fechas, exportación a HTML imprimible, tickets de impresión (58 mm y 80 mm en mesero), y diseño dark/dorado unificado (estilos.css + estilos inline en mesero), personalizada con la marca Familia González.*
+**Login** (`login.html`) → Firebase Auth → Firestore `usuarios/{uid}` → campo `rol` → redirección a **index.html** (admin) o **mesero.html** (mesero). Admin: SPA con secciones y `onSnapshot` en órdenes, ventas, gastos, menú, usuarios, configuración. Mesero: página independiente que lee menú y `configuracion/mesas`, escribe/actualiza en `ordenes`. Tiempo real en todas las colecciones críticas.
 
 ---
 
-## 2. Perspectiva cliente (para el negocio)
+## 2. Flujos de datos (paso a paso)
 
-### Objetivo de esta sección
+### 2.1 Login y redirección por rol
 
-Explicar **para qué sirve** la aplicación y **qué se construyó desde el punto de vista de utilidad**: qué puede hacer el cliente con el sistema en el día a día y qué beneficios obtiene.
+1. Usuario abre **login.html**. Formulario: `#loginForm`, inputs `#email`, `#password`, submit `#loginBtn`, errores en `#errorMessage`.
+2. **Botones demo** (sin tocar el formulario manualmente):
+   - **Ver demo completo (Admin):** rellena `demo@restiq.com` y `demo1234`, hace click en `#loginBtn`.
+   - **Ver demo de mesero:** rellena `mesero@restiq.com` y `demo1234`, hace click en `#loginBtn`.
+3. **auth.js**: al submit, `auth.signInWithEmailAndPassword(email, password)` → en éxito llama `checkUserRole(user.uid)`.
+4. `checkUserRole(uid)`: `db.collection('usuarios').doc(uid).get()` → lee `doc.data().rol`:
+   - `rol === 'admin'` → `window.location.href = 'index.html'`;
+   - `rol === 'mesero'` → `window.location.href = 'mesero.html'`;
+   - si no existe doc o rol no válido → muestra error, `auth.signOut()`.
+5. **onAuthStateChanged** (auth.js): si no hay usuario y la página no es login → redirige a `login.html`; si hay usuario y está en login → llama de nuevo `checkUserRole` para redirigir según rol.
 
-### ¿Para qué sirve?
+### 2.2 Panel admin (index.html + app.js)
 
-Sirve para **llevar el control de ventas, gastos y operación del restaurante** desde el celular o la computadora: el dueño o encargado ve en tiempo real cuánto se vende y cuánto se gasta, y los meseros pueden tomar pedidos por mesa sin necesidad de una caja registradora compleja. Todo queda registrado en la nube y se pueden generar reportes e imprimir tickets.
+1. **Navegación SPA:** Enlaces en sidebar con `data-section="dashboard"`, `data-section="ordenes"`, etc. Click → `mostrarSeccion(sectionId)`: quita `.active` de todas las secciones, añade `.active` a `#section-{sectionId}` y al enlace con ese `data-section`; actualiza `#headerTitle` con `titulosSeccion[sectionId]`.
+2. **Secciones (IDs de sección):** dashboard, ordenes, pedidos, cotizaciones, menu, meseros, gastos, reportes, reporte-semanal, mantenimiento, configuracion.
+3. **Tiempo real:** `onSnapshot` en:
+   - `ventas` (rango día) y `gastos` (rango día) → dashboard (ventasDia, gastosDia, gananciaNeta);
+   - `ordenes` → conteo órdenes activas y listado en `#ordenesBody`;
+   - `menu` → listado menú;
+   - `usuarios` con `where('rol','==','mesero')` → meseros;
+   - `configuracion` doc `mesas` → configuración de mesas.
+4. **Cobro de orden:** Usuario marca orden como pagada → se abre modal método de pago → al confirmar se escribe un doc en `ventas` (timestamp, mesa, total, platillos, meseroNombre, etc.) y la orden se actualiza o se elimina (`ordenes.doc(id).update` o `.delete()`).
+5. **Menú:** CRUD vía `menu` (add, update, delete). **Meseros:** creación con Auth + Firestore `usuarios` (rol `mesero`). **Gastos:** `gastos.add()`. **Reportes:** consultas por rango de fechas sobre `ventas` y `gastos`, exportación HTML para imprimir/PDF. **Reporte semanal:** agregaciones por día, mesero, platillo (lunes–domingo). **Mantenimiento:** búsqueda/eliminación por período en órdenes, cotizaciones, gastos (con confirmación). **Configuración:** `configuracion/mesas` (lista de mesas) y `configuracion/restaurante` (nombre, moneda).
 
-### ¿Qué beneficios tiene para el cliente?
+### 2.3 Panel mesero (mesero.html)
 
-- **Un solo sistema:** Entra desde el navegador (o instalando la PWA en el teléfono) y tiene panel de administración y panel para meseros en un mismo proyecto.
-- **Datos en tiempo real:** Ventas del día, gastos del día y ganancia se actualizan solos; las órdenes que toman los meseros se ven al instante en el panel del admin.
-- **Menos errores y más orden:** Pedidos por mesa, con menú actualizable; al cobrar se registra la venta y queda historial (ventas, gastos) para reportes.
-- **Reportes y contabilidad:** Puede filtrar por fechas, ver total de ingresos y gastos, saldo del período y exportar o imprimir un reporte (para el contador o revisión semanal).
-- **Uso en móvil:** La PWA se puede “instalar” en el teléfono y usarse como una app; si hay internet inestable, la interfaz puede seguir cargando desde caché (según estrategia del Service Worker).
-- **Sin servidor propio:** No tiene que mantener un servidor; todo corre en Firebase (Google), con copia de seguridad y disponibilidad gestionadas por el proveedor.
+1. **Carga:** `auth.onAuthStateChanged` → si hay user, se obtiene nombre en `usuarios/{uid}` y se muestran mesas. Mesas desde `db.collection('configuracion').doc('mesas').onSnapshot` (campo tipo array o lista de números de mesa).
+2. **Grid de mesas:** `#tablesGrid` con botones por mesa. Estado por mesa: sin orden, con orden del propio mesero (`meseroId === uid`), con orden de otro mesero (clases `.has-order`, `.mesa-propia`, `.mesa-ocupada-otro`). Datos de ocupación desde `ordenes.onSnapshot` (mapeo mesa → meseroId).
+3. **Abrir pedido:** Click en mesa → `openModal(tableNum)`: `selectedTable = tableNum`, `order = {}`, se rellena el menú en el modal (desde `menu.onSnapshot`), se muestra resumen vacío. Modal: overlay con lista de productos (`.btn-add` por ítem), resumen en `#orderItems` y `#orderTotal`, botón `#btnSend` (Enviar Orden).
+4. **Agregar ítems:** Cada `.btn-add` llama `addItem(id, name, price)`: actualiza objeto `order[id] = { name, price, qty }`, incrementa `qty`, llama `updateOrderSummary()` (refresca HTML del resumen y total) y muestra toast `#toastAdd` con texto tipo "+ Nombre  ×2" (500 ms).
+5. **Enviar orden:** Si es mesa nueva: `db.collection('ordenes').add({ mesa, platillos, total, estado: 'pendiente', meseroId: user.uid, meseroNombre, timestamp })`. Si es "Agregar platillo" a orden existente: se fusionan platillos y `ordenes.doc(editandoOrdenId).update({ platillos, total })`. Luego se cierra el modal y se resetea `order`.
+6. **Mis órdenes:** Listener `ordenes.where('meseroId','==', user.uid)` (y filtro por fecha si existe). Cada orden se pinta como card: mesa, estado, platillos, total y botón WhatsApp en la misma fila, botón "Agregar platillo". Desde la card se puede: enviar WhatsApp (`ticket.js`), imprimir, agregar platillos (abre modal en modo edición), +/- cantidad o eliminar ítem (update del doc `ordenes` con array `platillos` y `total` recalculado).
 
-### Funciones principales (qué puede hacer)
+### 2.4 Tickets
 
-**Para el administrador / dueño:**
-
-1. **Dashboard:** Ver ventas del día, gastos del día, ganancia neta y cantidad de órdenes activas.
-2. **Resumen por períodos:** Semana, mes y total histórico de ingresos, gastos y saldo.
-3. **Gráfica:** Últimos 7 días de ingresos y gastos en una gráfica.
-4. **Órdenes en vivo:** Listado de órdenes; cambiar estado (pendiente, preparando, servido); cobrar (elegir método de pago) y registrar la venta; imprimir ticket.
-5. **Menú:** Dar de alta, editar y eliminar platillos (nombre, precio, categoría).
-6. **Meseros:** Crear cuentas de mesero (email/contraseña) y asignar rol; listar y eliminar meseros.
-7. **Gastos:** Registrar gastos con descripción, categoría, monto y método de pago; listado en tiempo real.
-8. **Reportes:** Filtrar ventas por fechas; ver total del período; exportar reporte (abre ventana con resumen y tablas para imprimir o guardar como PDF).
-9. **Reporte semanal:** Resumen de la semana (lunes a domingo): ingresos, gastos, ganancia, día y hora pico, platillo más vendido, mesero destacado, etc.; imprimible.
-10. **Pedidos y cotizaciones:** Gestionar pedidos y cotizaciones (crear, editar, imprimir).
-11. **Configuración:** Ajustar mesas (número o lista de mesas) que ven los meseros.
-12. **Mantenimiento:** Buscar y, si se desea, eliminar registros antiguos de órdenes, cotizaciones o gastos por rango de fechas (con confirmaciones para evitar borrados por error).
-
-**Para el mesero:**
-
-1. Iniciar sesión con su cuenta (redirección automática al panel de mesero).
-2. Ver las mesas configuradas y elegir una.
-3. Armar el pedido desde el menú (cantidades y platillos); enviar la orden a cocina/administración.
-4. Ver sus órdenes activas por mesa: total y botón para enviar por WhatsApp en la misma fila; opción “Agregar platillo” para ampliar una orden ya enviada.
-5. Recibir confirmación visual (toast) al agregar un platillo al pedido (nombre y cantidad).
-6. (Según implementación) Imprimir ticket desde su pantalla; impresión térmica 80 mm disponible en la vista mesero.
-
-### ¿Cómo lo usa en el día a día?
-
-- **Entrada:** Abre la página de login, ingresa email y contraseña. Si es admin, entra al panel de administración; si es mesero, al panel de mesero.
-- **En servicio:** El mesero elige mesa, arma el pedido en la app y lo envía; en el panel admin se ve la orden y se puede cambiar estado y, al cobrar, registrar la venta e imprimir ticket.
-- **Al cierre o para contabilidad:** En Reportes elige fechas, ve totales y usa “Exportar PDF” para imprimir o guardar el reporte; también puede usar el Reporte semanal para una vista consolidada de la semana.
-
-### Resumen para el cliente en una frase
-
-*Es una aplicación que instala o abre en el navegador para controlar ventas y gastos del restaurante en tiempo real, que los meseros tomen pedidos por mesa, que se impriman tickets y que pueda sacar reportes por fechas para su contabilidad o revisión, sin necesidad de tener un servidor propio.*
+- **ticket.js** (cargado en index y mesero): `prepararTicket(ordenId)` — lee orden en Firestore, genera HTML de ticket 58 mm, abre ventana y `window.print()`. `enviarWhatsApp(ordenId)` — mismo HTML adaptado para imagen (tabla), html2canvas para PNG y enlace WhatsApp. Cotizaciones: `prepararCotizacion(cotizacionId)`, `enviarWhatsAppCotizacion(cotizacionId)`. En **mesero.html** hay además un contenedor e estilos `@media print` para impresión térmica 80 mm.
 
 ---
 
-## 3. Estructura técnica del proyecto (perspectiva archivo por archivo)
+## 3. Elementos DOM e IDs clave
 
-Esta sección documenta **cómo está construido** el proyecto: ubicación de cada archivo, **qué hace** y **cómo se relaciona** con el resto. Objetivo: visión integral y clara para mantenimiento, onboarding o auditoría técnica.
+### Login (login.html)
 
-### 3.1 Árbol de archivos y carpetas
+| ID / elemento | Uso |
+|---------------|-----|
+| `#loginForm` | Formulario de login (submit → auth) |
+| `#email` | Input correo |
+| `#password` | Input contraseña |
+| `#loginBtn` | Botón submit (texto "Ingresar", spinner mientras carga) |
+| `#errorMessage` | Mensaje de error (clase `.visible` para mostrar) |
+| `#btnDemo` | Botón "Ver demo completo" (Admin: demo@restiq.com / demo1234) |
+| `#btnDemoMesero` | Botón "Ver demo de mesero" (mesero@restiq.com / demo1234) |
+| `#btnInstall` | Botón instalar PWA (oculto hasta beforeinstallprompt) |
+
+Layout: `.page` (grid dos columnas), `.brand-panel` (izquierda), `.form-panel` (derecha). Variables CSS en `:root`: `--gold`, `--bg`, `--text`, `--text-muted`, `--border`, etc.
+
+### Panel admin (index.html)
+
+| ID / elemento | Uso |
+|---------------|-----|
+| `#headerTitle` | Título de la sección actual |
+| `#adminName` | Nombre del admin (opcional) |
+| `#btnLogout` / `#btnLogoutSidebar` | Cerrar sesión |
+| `.nav-list a[data-section]` | Navegación; `data-section` = id de sección |
+| `.section` / `#section-dashboard`, `#section-ordenes`, … | Secciones; solo una con `.active` |
+| `#ventasDia`, `#gastosDia`, `#gananciaNeta`, `#ordenesActivas` | Dashboard |
+| `#ordenesBody` | Listado de órdenes en vivo |
+| `#modalMetodoPago`, `#btnCancelarMetodoPago`, … | Modal método de pago al cobrar |
+| `#menuCardsGrid`, `#menuFilterPills`, `#menuEmptyState` | Sección menú |
+| `#modalPlatillo`, `#platilloNombre`, `#platilloPrecio`, `#platilloCategoria`, `#btnGuardarPlatillo` | Modal alta/edición platillo |
+| `#meserosGrid`, `#modalMesero`, `#meseroNombre`, `#meseroEmail`, `#meseroPassword`, `#btnGuardarMesero` | Meseros |
+| `#gastoDescripcion`, `#gastoCategoria`, `#gastoMonto`, `#gastoMetodoPago`, `#btnRegistrarGasto` | Gastos |
+| `#reporteDesde`, `#reporteHasta`, `#btnFiltrarReporte`, `#btnExportarPdf`, `#reportesBody` | Reportes |
+| `#reporteSemanalPeriodo`, `#btnGenerarReporteSemanal`, `#reporteSemanalContenido` | Reporte semanal |
+| Mantenimiento: `#btnBuscarOrdenes`, `#btnEliminarOrdenes`, etc. | Búsqueda y eliminación por período |
+| Configuración: `#restauranteNombre`, `#configRestauranteMensaje`, carga/guardado `configuracion/mesas` | Config restaurante y mesas |
+
+### Panel mesero (mesero.html)
+
+| ID / elemento | Uso |
+|---------------|-----|
+| `#waiterName` | Nombre del mesero en header |
+| `#btnLogout` | Cerrar sesión |
+| `#tablesGrid` | Contenedor de botones de mesas |
+| `.table-btn` | Botón por mesa (selected: `.selected` / `.active`) |
+| Modal pedido: overlay con clase `.open` para abrir | Contenedor del modal de orden |
+| `#orderItems` | Lista de ítems del resumen en el modal |
+| `#orderTotal` | Total del pedido en el modal |
+| `#btnSend` | "Enviar Orden" o "Agregar platillos" (según modo) |
+| `#toastAdd` | Toast de confirmación al agregar ítem ("+ Nombre  ×N") |
+| `#myOrdersList` | Lista de "Mis órdenes" (cards por orden) |
+| Cards: `.order-card`, `.order-card-mesa`, `.order-card-total`, `.order-card-actions` (oculto), `.btn-whatsapp-mesero`, `.btn-agregar-mas` | Estructura de cada orden en la lista |
+
+Menú en modal: productos con `.product-card`, `.btn-add` con `data-id`, `data-name`, `data-price`. Filtros por categoría (pills). Grid de menú en móvil: `.menu-cards-grid` (2 columnas en `@media (max-width: 768px)`).
+
+---
+
+## 4. Estructura Firestore (modelo de datos)
+
+- **`usuarios/{uid}`**  
+  Campos: `rol` ('admin' | 'mesero'), `nombre`, `email`. El rol determina la redirección tras login.
+
+- **`menu/{id}`**  
+  Campos: `nombre`, `precio` (number), `categoria`.
+
+- **`ordenes/{id}`**  
+  Campos: `mesa` (string), `platillos` (array de `{ nombre, precio, cantidad }`), `total` (number), `estado` ('pendiente', 'preparando', 'listo', 'entregado', 'pagada', etc.), `meseroId` (uid), `meseroNombre` (string), `timestamp` (Firestore serverTimestamp). El mesero filtra "mis órdenes" con `where('meseroId','==', user.uid)`.
+
+- **`ventas/{id}`**  
+  Campos: `timestamp`, `total`, `platillos`, `mesa`, `meseroNombre`, y opcionales como `metodoPago`. Se crean al cobrar una orden desde el admin.
+
+- **`gastos/{id}`**  
+  Campos: `fecha` (timestamp o string), `descripcion`, `categoria`, `monto`, `metodoPago`.
+
+- **`cotizaciones/{id}`**  
+  Estructura similar a órdenes; usada para pedidos presupuestados. Reporte semanal y mantenimiento pueden leer/eliminar por período.
+
+- **`configuracion/mesas`**  
+  Documento único: típicamente un campo (ej. `numeros` o `mesas`) con array de números o nombres de mesa para el grid del mesero.
+
+- **`configuracion/restaurante`**  
+  Documento único: nombre del restaurante, moneda, etc., usado en configuración del admin.
+
+---
+
+## 5. Archivos del proyecto y relaciones
 
 ```
 restaurante-pro/
-├── index.html              # Panel de administración (SPA)
-├── login.html              # Página de inicio de sesión
-├── mesero.html             # Panel del mesero (pedidos por mesa, tema dark/dorado inline)
-├── estilos.css             # Estilos globales (sistema dark/dorado, variables, layout, componentes)
-├── firebase-config.js      # Configuración e inicialización de Firebase (Auth + Firestore)
-├── auth.js                 # Lógica de login y redirección por rol (admin / mesero)
-├── app.js                  # Lógica completa del panel admin (dashboard, órdenes, menú, reportes, etc.)
-├── toasts.js               # Sistema de notificaciones toast (success, error, info); sustituye alert()
-├── ticket.js               # Generación de tickets (impresión 58 mm y PNG para WhatsApp)
-├── sw.js                   # Service Worker registrado por la app (PWA, caché Network First)
-├── service-worker.js       # Variante de Service Worker (Network First, exclusiones Firebase)
-├── manifest.json           # Manifest PWA (nombre, iconos, display standalone)
-├── vercel.json             # Configuración de despliegue en Vercel (headers SW y manifest)
-├── REPORTE_PWA_CONTABILIDAD.md   # Este documento
+├── index.html          # Panel admin (SPA): todas las secciones, modales
+├── login.html          # Login: formulario + botones demo Admin/Mesero
+├── mesero.html         # Panel mesero: mesas, modal menú, mis órdenes, script inline
+├── estilos.css         # Sistema dark/dorado global (variables, layout, componentes)
+├── firebase-config.js  # firebaseConfig + firebase.initializeApp; expone auth, db
+├── auth.js             # Submit login, checkUserRole(uid), onAuthStateChanged
+├── app.js              # Lógica admin: mostrarSeccion, onSnapshot, CRUD, reportes, cobro
+├── toasts.js           # showToast(message, type) — success | error | info
+├── ticket.js           # prepararTicket, enviarWhatsApp, prepararCotizacion, enviarWhatsAppCotizacion
+├── sw.js               # Service Worker: precache estáticos, fetch Network First, excluye Firebase
+├── service-worker.js   # Variante SW (no registrada por defecto)
+├── manifest.json       # PWA: nombre, iconos, display standalone
+├── vercel.json         # Headers para SW y manifest
+├── REPORTE_PWA_CONTABILIDAD.md
 └── icons/
-    ├── icon-192.png        # Icono PWA 192×192
-    └── icon-512.png        # Icono PWA 512×512
+    ├── icon-192.png
+    └── icon-512.png
 ```
 
-**Nota:** La aplicación registra **`sw.js`** en el navegador (`index.html`, `login.html`, `mesero.html`). El archivo **`service-worker.js`** es una variante más detallada; si se desea usar esa versión, hay que registrar `service-worker.js` en lugar de `sw.js` y asegurar que Vercel sirva ese archivo (en `vercel.json` ya hay headers para `/service-worker.js`).
+### Orden de carga de scripts
+
+- **login.html:** Firebase SDKs → firebase-config.js → auth.js → script inline (SW, install, demo buttons).
+- **index.html:** Chart.js, html2canvas → Firebase SDKs → firebase-config.js → auth.js → toasts.js → ticket.js → app.js → SW.
+- **mesero.html:** html2canvas → Firebase SDKs → firebase-config.js → auth.js → toasts.js → ticket.js → script inline (mesero) → SW.
+
+**Dependencias:** Cualquier script que use `auth` o `db` debe cargar después de Firebase SDKs y `firebase-config.js`. En admin, `app.js` usa `showToast` (toasts.js) y `prepararTicket`/`enviarWhatsApp` (ticket.js). Mesero usa `showToast`, `enviarWhatsApp` y el propio script inline (order, addItem, updateOrderSummary, listeners Firestore).
+
+### Descripción breve por archivo
+
+| Archivo | Qué hace |
+|---------|----------|
+| **login.html** | Página de acceso: form email/contraseña, botones demo (Admin y Mesero), layout dos columnas (brand + form). No carga toasts.js. |
+| **auth.js** | Submit → signInWithEmailAndPassword → checkUserRole → get usuarios/{uid} → redirect. onAuthStateChanged protege páginas y redirige al login o por rol. |
+| **index.html** | SPA admin: secciones con id `section-*`, nav por `data-section`, modales (platillo, mesero, método pago). Carga estilos.css, Chart.js, html2canvas, Firebase, auth, toasts, ticket, app. |
+| **app.js** | IIFE. Referencias a todos los IDs del admin; mostrarSeccion; onSnapshot ventas, gastos, ordenes, menu, usuarios (meseros), configuracion; dashboard; CRUD menú y meseros; gastos; reportes por fechas y reporte semanal; mantenimiento; configuración mesas/restaurante; cobro orden (modal → ventas.add, orden update/delete). |
+| **mesero.html** | Grid mesas desde configuracion/mesas; modal con menú (menu.onSnapshot), order {}, addItem, updateOrderSummary, btnSend → ordenes.add o update; listener ordenes por meseroId; cards con total + WhatsApp y "Agregar platillo"; toast #toastAdd. Bloque <style> con tema dark/dorado. |
+| **estilos.css** | :root (colores, tipografía, sombras, radios). Layout sidebar + content. Componentes: botones, tablas, modales, formularios. Usado por index, login, mesero. |
+| **toasts.js** | showToast(msg, type). Crea contenedor si no existe; fallback a alert. |
+| **ticket.js** | Lee orden/cotización de Firestore, genera HTML ticket (58 mm o formato WhatsApp), print o html2canvas. |
+| **sw.js** | install: precache index, mesero, login, firebase-config, auth, app, iconos. fetch: mismo origen; excluye URLs con firebase/googleapis/gstatic; Network First con fallback a caché. |
 
 ---
 
-### 3.2 Descripción archivo por archivo
+## 6. Convenciones de código
 
-| Ubicación | Archivo | Qué hace | Dónde se usa / dependencias |
-|-----------|---------|----------|-----------------------------|
-| **Raíz** | `index.html` | Página única del **panel de administración**. Markup de todas las secciones (Dashboard, Órdenes, Menú, Meseros, Gastos, Reportes, Reporte semanal, Mantenimiento, Configuración). Navegación por `data-section` sin recargar; una sola sección visible (`.section.active`). Incluye modales (platillo, mesero, método de pago, etc.). | Carga: `estilos.css`, Firebase (compat), `firebase-config.js`, `auth.js`, `toasts.js`, `ticket.js`, `app.js`, Chart.js, html2canvas. Registra `sw.js`. Solo accesible tras login con rol `admin`. |
-| **Raíz** | `login.html` | Página de **inicio de sesión**: formulario email/contraseña. Al enviar, llama a Firebase Auth y consulta el rol en Firestore (`usuarios/{uid}`); redirige a `index.html` (admin) o `mesero.html` (mesero). Muestra errores de login y estado de carga. | Carga: `estilos.css`, Firebase (compat), `firebase-config.js`, `auth.js`. Registra `sw.js`. No requiere estar logueado. |
-| **Raíz** | `mesero.html` | **Panel del mesero**: selección de mesa, menú desde Firestore, armado del pedido (cantidades/platillos) y envío a la colección `ordenes`. Puede agregar platillos a órdenes ya enviadas; total y botón WhatsApp en la misma fila por orden. Incluye bloque `<style>` con tema dark/dorado (variables, botones, cards, toast de confirmación al agregar ítem, grid de menú responsive 2 columnas en móvil). Impresión térmica 80 mm en `@media print`. | Carga: `estilos.css`, Firebase (compat), `firebase-config.js`, `auth.js`, `toasts.js`, `ticket.js`, script inline del mesero. Registra `sw.js`. Solo accesible tras login con rol `mesero`. |
-| **Raíz** | `estilos.css` | **Hojas de estilo globales**: sistema dark/dorado (`:root` con fondos oscuros, acento #D4AF37, tipografía Inter / DM Serif Display), layout (sidebar, contenido, cards), componentes (botones, tablas, modales, formularios), estados (hover, active, error). Usado por `index.html`, `login.html` y `mesero.html`. | Referenciado con `<link rel="stylesheet" href="estilos.css">` en las tres páginas HTML. |
-| **Raíz** | `firebase-config.js` | **Configuración de Firebase**: objeto `firebaseConfig` (apiKey, authDomain, projectId, etc.) y llamada a `firebase.initializeApp()`. Expone `auth` y `db` (Firestore) como variables globales. Debe cargarse **después** de los SDKs de Firebase y **antes** de `auth.js` y `app.js`. | Cargado en `index.html`, `login.html` y `mesero.html` después de los SDKs de Firebase. |
-| **Raíz** | `auth.js` | **Autenticación y redirección por rol**: maneja el submit del formulario de login (`signInWithEmailAndPassword`), obtiene el documento `usuarios/{uid}` en Firestore, lee el campo `rol` y redirige a `index.html` (admin) o `mesero.html` (mesero). Incluye `onAuthStateChanged` para redirigir al login si no hay sesión en una página protegida. | Cargado en las tres páginas HTML después de `firebase-config.js`. Depende de `auth` y `db` definidos en `firebase-config.js`. |
-| **Raíz** | `app.js` | **Lógica del panel administrador**: IIFE. Navegación por secciones, listeners en tiempo real de Firestore (`onSnapshot`) para órdenes, ventas, gastos, menú, usuarios (meseros), configuración. Dashboard, CRUD de menú y meseros, registro de gastos, reportes por fechas, reporte semanal, mantenimiento, configuración de mesas. Cobro de órdenes (modal método de pago, escritura en `ventas`). Llama a `prepararTicket`, `enviarWhatsApp`, etc. de `ticket.js` y a `showToast` de `toasts.js`. | Cargado solo en `index.html` después de `ticket.js`. Depende de `auth`, `db`, `ticket.js` y `toasts.js`. |
-| **Raíz** | `toasts.js` | **Notificaciones toast**: IIFE que expone `showToast(message, type)`. Tipos: success, error, info. Crea contenedor dinámico si no existe; fallback a `alert()` si falla. Duración configurable. | Cargado en `index.html` y `mesero.html` antes de `ticket.js` y `app.js`. No tiene dependencias de Firebase. |
-| **Raíz** | `ticket.js` | **Tickets e impresión**: IIFE que expone `prepararTicket(ordenId)`, `enviarWhatsApp(ordenId)`, `prepararCotizacion(cotizacionId)`, `enviarWhatsAppCotizacion(cotizacionId)`. Lee orden/cotización desde Firestore, genera HTML con estilos para impresión (58 mm) o para imagen PNG (WhatsApp), abre ventana e imprime o usa html2canvas para descargar PNG. Marca "Familia González" en cabecera y pie. | Cargado en `index.html` y `mesero.html` después de `auth.js`. Depende de `db`; usa `html2canvas` si está presente (WhatsApp). |
-| **Raíz** | `sw.js` | **Service Worker** registrado por la app: en `install` precachea lista de estáticos (`index.html`, `mesero.html`, `login.html`, `firebase-config.js`, `auth.js`, `app.js`, iconos). En `fetch` no intercepta peticiones a orígenes distintos ni URLs que contengan "firebase" o "googleapis"/"gstatic"; para el resto de estáticos usa red y actualiza caché (Network First con fallback a caché). En `activate` limpia cachés antiguos y hace `skipWaiting`/`clients.claim`. | Registrado desde `index.html`, `login.html` y `mesero.html` con `navigator.serviceWorker.register('/sw.js')`. |
-| **Raíz** | `service-worker.js` | **Service Worker alternativo**: estrategia Network First documentada; excluye explícitamente Firestore y APIs de Firebase. No se registra por defecto en el código actual. | Pensado para registrarse en lugar de `sw.js` si se quiere esta variante; `vercel.json` define headers para `/service-worker.js`. |
-| **Raíz** | `manifest.json` | **Web App Manifest**: nombre "Familia González", `short_name` "Fam. González", descripción, `display: standalone`, `theme_color`, `background_color`, iconos 192 y 512. Usado por el navegador para instalar la PWA y mostrar splash/barra. | Enlazado con `<link rel="manifest" href="/manifest.json">` en las tres páginas HTML. |
-| **Raíz** | `vercel.json` | **Configuración Vercel**: headers para `/service-worker.js` (Cache-Control: no-cache, Service-Worker-Allowed: /) y para `/manifest.json` (Content-Type: application/manifest+json). | Aplicado en el despliegue en Vercel; no lo referencia ningún archivo del front. |
-| **Raíz** | `REPORTE_PWA_CONTABILIDAD.md` | **Documentación**: reporte integral del proyecto (perspectiva técnica, cliente y estructura archivo por archivo). | Solo lectura/documentación. |
-| **icons/** | `icon-192.png` | Icono de la PWA 192×192 px. | Referenciado en `manifest.json` y como favicon/apple-touch-icon en los HTML. |
-| **icons/** | `icon-512.png` | Icono de la PWA 512×512 px. | Referenciado en `manifest.json`. |
+- **JavaScript:** Vanilla, IIFE, sin frameworks. Uso de `getElementById`, `querySelector`, `addEventListener`. Variables globales: `auth`, `db` (firebase-config.js), `showToast` (toasts.js), y en ventana las funciones de ticket.js.
+- **Navegación admin:** `data-section` en enlaces; sección visible = elemento con id `section-{sectionId}` y clase `active`.
+- **Nombres Firestore:** Colecciones en minúsculas: `usuarios`, `menu`, `ordenes`, `ventas`, `gastos`, `cotizaciones`, `configuracion`. Documentos: `configuracion/mesas`, `configuracion/restaurante`; usuarios por uid.
+- **Marca:** "Familia González" en tickets e impresiones (ticket.js y textos en la app). RESTIQ como nombre de producto en login y headers.
 
 ---
 
-### 3.3 Orden de carga de scripts (flujo técnico)
+## 7. Perspectiva cliente (para el negocio)
 
-- **Login (`login.html`):**  
-  Firebase SDKs → `firebase-config.js` → `auth.js` → registro de `sw.js`.
+### ¿Para qué sirve?
 
-- **Panel admin (`index.html`):**  
-  Chart.js → html2canvas → Firebase SDKs → `firebase-config.js` → `auth.js` → `toasts.js` → `ticket.js` → `app.js` → registro de `sw.js`.
+Control de **ventas, gastos y operación** del restaurante desde navegador o PWA: el dueño ve en tiempo real ventas y gastos; los meseros toman pedidos por mesa. Todo en la nube, con reportes e impresión de tickets.
 
-- **Panel mesero (`mesero.html`):**  
-  html2canvas → Firebase SDKs → `firebase-config.js` → `auth.js` → `toasts.js` → `ticket.js` → script propio del mesero (inline) → registro de `sw.js`.
+### Funciones principales
 
-En todas las páginas, **Firebase** y **firebase-config.js** deben cargarse antes que cualquier script que use `auth` o `db`.
+**Admin:** Dashboard (ventas/gastos del día, ganancia, órdenes activas), gráfica 7 días, órdenes en vivo (cambiar estado, cobrar, imprimir ticket), menú (CRUD), meseros (crear/listar/eliminar), gastos, reportes por fechas y exportar/PDF, reporte semanal, pedidos y cotizaciones, configuración (mesas, restaurante), mantenimiento (eliminar por período con confirmación).
 
----
+**Mesero:** Login → panel mesero; ver mesas y elegir una; abrir modal, agregar ítems del menú, enviar orden (o agregar a una existente); ver "Mis órdenes" con total y WhatsApp en la misma fila; agregar platillos, cambiar cantidades; toast al agregar ítem; imprimir ticket / 80 mm si está disponible.
 
-### 3.4 Dependencias externas (CDN)
+### Credenciales demo (login)
 
-| Recurso | Uso |
-|--------|-----|
-| Firebase JS (app-compat, auth-compat, firestore-compat) v9 | Autenticación y Firestore. |
-| Chart.js (jsdelivr) | Gráfica de ingresos/gastos últimos 7 días en el dashboard (solo `index.html`). |
-| html2canvas (cdnjs) | Generación de imagen PNG del ticket para WhatsApp en `ticket.js` (`index.html` y `mesero.html`). |
-| Google Fonts (Inter, DM Serif Display) | Tipografía en `estilos.css` y en los HTML. |
+- **Admin:** demo@restiq.com / demo1234 (botón "Ver demo completo").
+- **Mesero:** mesero@restiq.com / demo1234 (botón "Ver demo de mesero").
 
 ---
 
-### 3.5 Resumen de la estructura
-
-- **Entrada:** `login.html` → autenticación y redirección por rol (`auth.js`).
-- **Pantallas:** `index.html` (admin) y `mesero.html` (mesero), ambas con `estilos.css` y la misma base Firebase + auth; mesero además con estilos inline (tema dark/dorado y componentes propios).
-- **Backend:** Solo Firebase (Auth + Firestore); no hay servidor propio.
-- **PWA:** `manifest.json` + `sw.js` (o `service-worker.js`), con `vercel.json` para headers en producción.
-- **Documentación:** Este reporte describe qué hace el sistema, para quién y cómo está construido archivo por archivo.
-
-Con esta sección se tiene una **perspectiva técnica integral** del proyecto: estructura clara, ubicación de archivos, función de cada uno y relaciones entre ellos.
-
----
-
-## Resumen ejecutivo
+## 8. Resumen ejecutivo
 
 | Pregunta | Respuesta técnica | Respuesta cliente |
 |----------|-------------------|-------------------|
-| **¿Qué construí?** | PWA con Firebase (Auth + Firestore), dos frontends (admin + mesero), Service Worker, toasts, reportes por fechas y tickets de impresión (58 mm y 80 mm en mesero); diseño dark/dorado unificado; marca Familia González en toda la app. | Sistema para manejar ventas, gastos y pedidos del restaurante (Familia González) desde el celular o la computadora. |
-| **¿Para qué sirve?** | Centralizar operación y contabilidad en Firestore en tiempo real, con roles y sin backend propio. | Llevar control de caja, ver ganancia en vivo, que meseros tomen pedidos y sacar reportes para contabilidad. |
-| **¿Cómo funciona?** | Login → rol en Firestore → redirección; lecturas/escrituras en tiempo real; toasts para feedback; reportes con consultas por rango de fechas; PWA con caché Network First. | Entra con usuario/contraseña; admin ve dashboard y reportes; mesero toma pedidos por mesa y puede agregar a órdenes y enviar por WhatsApp; al cobrar se registra la venta y puede imprimir ticket y reportes. |
-
-**Documentación de estructura:** El apartado *3. Estructura técnica del proyecto* describe la construcción archivo por archivo: árbol de carpetas, función de cada archivo, ubicación, dependencias y orden de carga de scripts, para una visión integral del proyecto.
+| **¿Qué es?** | PWA con Firebase (Auth + Firestore), dos frontends (admin + mesero), Service Worker, toasts, reportes, tickets 58 mm y 80 mm (mesero), diseño dark/dorado, marca Familia González. | App para ventas, gastos y pedidos del restaurante desde navegador o app instalada. |
+| **¿Para qué sirve?** | Centralizar operación y contabilidad en Firestore en tiempo real, con roles admin/mesero y sin backend propio. | Control de caja, pedidos por mesa, reportes e impresión de tickets. |
+| **¿Cómo funciona?** | Login → rol en Firestore → redirect; onSnapshot en colecciones; toasts; reportes por fechas; PWA Network First. | Entrar con usuario/contraseña o demo; admin gestiona todo; mesero toma pedidos y ve sus órdenes; al cobrar se registra venta y se puede imprimir. |
 
 ---
 
-*Documento generado a partir del proyecto Restaurante Pro — Familia González — PWA de contabilidad. Última actualización: marzo 2025.*
+*Documento de contexto del proyecto Restaurante Pro — Familia González — PWA de contabilidad. Actualizado para servir como referencia completa para IA (p. ej. Cursor) y para desarrolladores. Última actualización: marzo 2026.*

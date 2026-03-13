@@ -154,6 +154,7 @@
             color: var(--color-text);
             cursor: pointer;
             transition: all 150ms ease;
+            position: relative;
         }
         .table-btn:hover {
             border-color: var(--color-primary);
@@ -690,32 +691,53 @@
 
         .orden-platillo-fila {
             display: flex;
-            align-items: center;
-            gap: 8px;
-            padding: 5px 0;
+            flex-direction: column;
+            gap: 4px;
+            padding: 6px 0;
             border-bottom: 1px solid #2a2a2a;
             font-size: 0.88rem;
         }
         .orden-platillo-fila:last-child {
             border-bottom: none;
         }
+        .orden-platillo-linea1 {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            width: 100%;
+        }
         .orden-platillo-nombre {
             flex: 1;
+            min-width: 0;
             color: var(--color-text);
+            word-break: break-word;
         }
         .orden-platillo-qty {
+            flex-shrink: 0;
+            white-space: nowrap;
             color: var(--color-primary);
             font-weight: 700;
             min-width: 28px;
             text-align: center;
         }
+        .orden-platillo-linea2 {
+            display: flex;
+            align-items: center;
+            justify-content: flex-end;
+            gap: 6px;
+            width: 100%;
+        }
         .orden-platillo-precio {
+            flex-shrink: 0;
+            white-space: nowrap;
             color: var(--color-text-muted);
             font-size: 0.8rem;
-            min-width: 60px;
+            min-width: 54px;
             text-align: right;
         }
         .btn-qty {
+            flex-shrink: 0;
+            white-space: nowrap;
             width: 32px;
             height: 32px;
             min-width: 32px;
@@ -749,6 +771,8 @@
             background: var(--color-primary-light);
         }
         .btn-eliminar-platillo {
+            flex-shrink: 0;
+            white-space: nowrap;
             width: 32px;
             height: 32px;
             min-width: 32px;
@@ -847,6 +871,44 @@
         .btn-agregar-mas {
             margin-left: 1rem !important;
         }
+
+        /* Notificación de orden lista en mesa */
+        .mesa-lista {
+            border-color: #10b981 !important;
+            box-shadow: 0 0 12px rgba(16, 185, 129, 0.6) !important;
+            animation: pulso-listo 1.5s ease-in-out 3;
+        }
+
+        @keyframes pulso-listo {
+            0%, 100% { transform: scale(1); }
+            50%       { transform: scale(1.05); }
+        }
+
+        .mesa-lista-badge {
+            position: absolute;
+            top: -6px;
+            right: -6px;
+            background: #10b981;
+            color: white;
+            border-radius: 50%;
+            width: 20px;
+            height: 20px;
+            font-size: 11px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: bold;
+            pointer-events: none;
+        }
+
+        .mesero-restaurant-name {
+            font-size: 13px;
+            color: #D4AF37;
+            font-weight: 600;
+            letter-spacing: 0.5px;
+            margin-left: 8px;
+            opacity: 0.9;
+        }
     </style>
 </head>
 
@@ -862,6 +924,7 @@
             </svg>
             <span>RESTIQ</span>
         </span>
+        <div id="meseroRestaurantName" class="mesero-restaurant-name"></div>
         <div class="header-right">
             <span class="waiter-name">Mesero: <strong id="waiterName">---</strong></span>
             <button type="button" class="btn-logout" id="btnLogout">Cerrar sesión</button>
@@ -909,6 +972,7 @@
                     <div class="order-items" id="orderItems">
                         <p class="empty-order">Esperando nuevas experiencias gastronómicas…</p>
                     </div>
+                    <textarea id="notaOrdenGeneral" class="nota-orden-general" rows="2" maxlength="200" placeholder="Nota general: alergia a mariscos, es cumpleaños..."></textarea>
                     <div class="order-total">
                         <span>Total:</span>
                         <span id="orderTotal">$0</span>
@@ -944,6 +1008,8 @@
             var meseroNombre = '';
             var editandoOrdenId = null;
             var editandoPlatillosOriginales = [];
+            var estadosAnteriores = {};
+            var primeraEjecucionMesero = true;
 
             // DOM
             var tablesGrid = document.getElementById('tablesGrid');
@@ -992,6 +1058,13 @@
                     meseroNombre = user.displayName || user.email || 'Mesero';
                     waiterNameEl.textContent = meseroNombre;
                 });
+
+                db.collection('configuracion').doc('restaurante').get()
+                    .then(function (doc) {
+                        var nombre = doc.exists && doc.data().nombre ? doc.data().nombre : '';
+                        var el = document.getElementById('meseroRestaurantName');
+                        if (el && nombre) el.textContent = nombre;
+                    });
 
                 // 2. Menú dinámico en tiempo real desde db.collection('menu')
                 db.collection('menu').onSnapshot(function (snapshot) {
@@ -1066,21 +1139,49 @@
                             var precio = p.precio || 0;
                             var subtotal = precio * cant;
                             var nombre = p.nombre || '';
-                            platillosHtml += '<div class="orden-platillo-fila" data-index="' + idx + '">' +
-                                '<span class="orden-platillo-nombre">' + nombre + '</span>' +
-                                '<span class="orden-platillo-qty">[' + cant + 'x]</span>' +
-                                '<span class="orden-platillo-precio">$' + precio + '</span>' +
+                            var nota = (p && p.nota) ? String(p.nota).trim() : '';
+
+                            // Línea 1: nombre + cantidad
+                            var linea2Html = '<span class="orden-platillo-precio">$' + precio + '</span>' +
                                 '<span class="orden-platillo-precio">$' + subtotal.toFixed(2) + '</span>';
                             if (puedeCambiarQty) {
-                                platillosHtml += '<button type="button" class="btn-qty btn-qty-mas" data-index="' + idx + '" aria-label="Aumentar">+</button>' +
+                                linea2Html += '<button type="button" class="btn-qty btn-qty-mas" data-index="' + idx + '" aria-label="Aumentar">+</button>' +
                                     '<button type="button" class="btn-qty btn-qty-menos" data-index="' + idx + '" aria-label="Disminuir">−</button>';
                             }
                             if (puedeEliminar) {
-                                platillosHtml += '<button type="button" class="btn-eliminar-platillo" data-index="' + idx + '" data-nombre="' + nombre.replace(/"/g, '&quot;') + '" aria-label="Eliminar">✕</button>';
+                                linea2Html += '<button type="button" class="btn-eliminar-platillo" data-index="' + idx + '" data-nombre="' + nombre.replace(/"/g, '&quot;') + '" aria-label="Eliminar">✕</button>';
                             }
-                            platillosHtml += '</div>';
+                            platillosHtml += '<div class="orden-platillo-fila" data-index="' + idx + '">' +
+                                '<div class="orden-platillo-linea1">' +
+                                    '<span class="orden-platillo-nombre">' + nombre + '</span>' +
+                                    '<span class="orden-platillo-qty">[' + cant + 'x]</span>' +
+                                '</div>' +
+                                '<div class="orden-platillo-linea2">' + linea2Html + '</div>' +
+                                '</div>';
+
+                            // Nota en línea propia debajo (si existe)
+                            if (nota) {
+                                var notaEsc = nota
+                                    .replace(/&/g, '&amp;')
+                                    .replace(/</g, '&lt;')
+                                    .replace(/>/g, '&gt;')
+                                    .replace(/"/g, '&quot;')
+                                    .replace(/'/g, '&#39;');
+                                platillosHtml += '<div class="nota-platillo-row" style="padding-left:8px; font-size:12px; font-style:italic; opacity:0.8; margin-bottom:4px; color:#a0aec0;">→ ' + notaEsc + '</div>';
+                            }
                         });
                         if (!platillosHtml) platillosHtml = '<div class="orden-platillo-fila"><span class="orden-platillo-nombre">—</span></div>';
+
+                        var notaOrdenText = (o.notaOrden && String(o.notaOrden).trim()) || '';
+                        if (notaOrdenText) {
+                            var notaOrdenEsc = notaOrdenText
+                                .replace(/&/g, '&amp;')
+                                .replace(/</g, '&lt;')
+                                .replace(/>/g, '&gt;')
+                                .replace(/"/g, '&quot;')
+                                .replace(/'/g, '&#39;');
+                            platillosHtml += '<div class="nota-orden-display"><span class="nota-orden-label">Nota general:</span> ' + notaOrdenEsc + '</div>';
+                        }
 
                         var botonesAcciones = '';
                         if (!esPagada) {
@@ -1230,6 +1331,31 @@
 
                 db.collection('ordenes').onSnapshot(function (snapshot) {
                     lastOrdenesSnapshot = snapshot;
+
+                    var currentUid = auth.currentUser ? auth.currentUser.uid : '';
+                    if (!primeraEjecucionMesero) {
+                        snapshot.forEach(function (doc) {
+                            var datos = doc.data();
+                            var estadoActual = datos.estado || '';
+                            if (
+                                estadosAnteriores[doc.id] &&
+                                estadosAnteriores[doc.id] !== 'listo' &&
+                                estadoActual === 'listo' &&
+                                datos.meseroId === currentUid
+                            ) {
+                                notificarOrdenLista(datos.mesa, doc.id);
+                            }
+                        });
+                    }
+
+                    snapshot.forEach(function (doc) {
+                        estadosAnteriores[doc.id] = doc.data().estado || '';
+                    });
+
+                    if (primeraEjecucionMesero) {
+                        primeraEjecucionMesero = false;
+                    }
+
                     actualizarGridMesas();
                 });
             });
@@ -1428,15 +1554,34 @@
                 var html = '';
                 for (var id in order) {
                     if (order[id].qty > 0) {
+                        if (typeof order[id].nota !== 'string') {
+                            order[id].nota = '';
+                        }
                         var subtotal = order[id].price * order[id].qty;
                         total += subtotal;
+                        var notaValue = order[id].nota || '';
+                        var notaAttr = notaValue
+                            .replace(/&/g, '&amp;')
+                            .replace(/"/g, '&quot;')
+                            .replace(/</g, '&lt;')
+                            .replace(/>/g, '&gt;');
                         html += '<div class="order-item">' +
                             '<span><span class="order-item-qty">' + order[id].qty + 'x</span> ' + order[id].name + '</span>' +
+                            '<input type="text" class="nota-platillo-input" data-id="' + id + '" placeholder="Nota: sin cebolla, término medio..." maxlength="100" value="' + notaAttr + '">' +
                             '<span>$' + subtotal + '</span></div>';
                     }
                 }
                 if (html) {
                     orderItems.innerHTML = html;
+                    var notaInputs = orderItems.querySelectorAll('.nota-platillo-input');
+                    notaInputs.forEach(function (input) {
+                        var platilloId = input.getAttribute('data-id');
+                        input.addEventListener('input', function () {
+                            if (order[platilloId]) {
+                                order[platilloId].nota = this.value;
+                            }
+                        });
+                    });
                     btnSend.disabled = false;
                 } else {
                     orderItems.innerHTML = '<p class="empty-order">Esperando nuevas experiencias gastronómicas…</p>';
@@ -1453,7 +1598,11 @@
                 updateOrderSummary();
                 modalOverlay.classList.add('open');
                 if (tableButtons[tableNum]) {
-                    tableButtons[tableNum].classList.add('selected');
+                    var btn = tableButtons[tableNum];
+                    btn.classList.add('selected');
+                    btn.classList.remove('mesa-lista');
+                    var badge = btn.querySelector('.mesa-lista-badge');
+                    if (badge) badge.parentNode.removeChild(badge);
                 }
             }
 
@@ -1476,6 +1625,8 @@
                 }
                 selectedTable = null;
                 order = {};
+                var notaGeneral = document.getElementById('notaOrdenGeneral');
+                if (notaGeneral) notaGeneral.value = '';
                 editandoOrdenId = null;
                 editandoPlatillosOriginales = [];
                 btnSend.textContent = 'Enviar Orden';
@@ -1495,6 +1646,10 @@
                 var user = auth.currentUser;
                 if (!user) return;
 
+                var notaOrdenTexto = '';
+                var notaOrdenEl = document.getElementById('notaOrdenGeneral');
+                if (notaOrdenEl) notaOrdenTexto = notaOrdenEl.value.trim();
+
                 // Construir array de platillos nuevos seleccionados
                 var platillosNuevos = [];
                 var totalNuevo = 0;
@@ -1503,7 +1658,8 @@
                         platillosNuevos.push({
                             nombre: order[id].name,
                             precio: order[id].price,
-                            cantidad: order[id].qty
+                            cantidad: order[id].qty,
+                            nota: order[id].nota || ''
                         });
                         totalNuevo += order[id].price * order[id].qty;
                     }
@@ -1519,14 +1675,20 @@
                                 fusionados[i] = {
                                     nombre: fusionados[i].nombre,
                                     precio: fusionados[i].precio,
-                                    cantidad: (fusionados[i].cantidad || 1) + nuevo.cantidad
+                                    cantidad: (fusionados[i].cantidad || 1) + nuevo.cantidad,
+                                    nota: (fusionados[i].nota || nuevo.nota || '')
                                 };
                                 encontrado = true;
                                 break;
                             }
                         }
                         if (!encontrado) {
-                            fusionados.push(nuevo);
+                            fusionados.push({
+                                nombre: nuevo.nombre,
+                                precio: nuevo.precio,
+                                cantidad: nuevo.cantidad,
+                                nota: nuevo.nota || ''
+                            });
                         }
                     });
 
@@ -1538,7 +1700,8 @@
 
                     db.collection('ordenes').doc(editandoOrdenId).update({
                         platillos: fusionados,
-                        total: totalFinal
+                        total: totalFinal,
+                        notaOrden: notaOrdenTexto
                     }).then(function() {
                         var toastEl = document.getElementById('toast');
                         toastEl.textContent = 'Platillos agregados correctamente';
@@ -1565,7 +1728,8 @@
                     estado: 'pendiente',
                     meseroId: user.uid,
                     meseroNombre: meseroNombre || user.displayName || user.email || 'Mesero',
-                    timestamp: firebase.firestore.FieldValue.serverTimestamp()
+                    timestamp: firebase.firestore.FieldValue.serverTimestamp(),
+                    notaOrden: notaOrdenTexto
                 }).then(function() {
                     var toastEl = document.getElementById('toast');
                     toastEl.classList.add('show');
@@ -1574,6 +1738,57 @@
                 }).catch(function(err) {
                     console.error('Error al guardar orden:', err);
                 });
+            }
+
+            function notificarOrdenLista(mesa, ordenId) {
+                // 1. Sonido: doble pitido con Web Audio API
+                try {
+                    var ctx = new (window.AudioContext || window.webkitAudioContext)();
+                    function pitido(freq, inicio, duracion) {
+                        var osc = ctx.createOscillator();
+                        var gain = ctx.createGain();
+                        osc.connect(gain);
+                        gain.connect(ctx.destination);
+                        osc.frequency.value = freq;
+                        osc.type = 'sine';
+                        gain.gain.setValueAtTime(0.3, ctx.currentTime + inicio);
+                        gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + inicio + duracion);
+                        osc.start(ctx.currentTime + inicio);
+                        osc.stop(ctx.currentTime + inicio + duracion);
+                    }
+                    pitido(1000, 0, 0.15);
+                    pitido(1200, 0.25, 0.2);
+                } catch (e) { /* silencio si Web Audio no está disponible */ }
+
+                // 2. Toast
+                var msg = '✅ Mesa ' + mesa + ' — ¡Orden lista para servir!';
+                if (typeof window.showToast === 'function') {
+                    window.showToast(msg, 'success');
+                } else {
+                    var div = document.createElement('div');
+                    div.textContent = msg;
+                    div.style.cssText = 'position:fixed;top:20px;right:20px;background:#065f46;color:#fff;padding:14px 20px;border-radius:10px;font-size:14px;font-weight:700;z-index:9999;box-shadow:0 4px 16px rgba(0,0,0,0.4);';
+                    document.body.appendChild(div);
+                    setTimeout(function () {
+                        if (div.parentNode) div.parentNode.removeChild(div);
+                    }, 5000);
+                }
+
+                // 3. Badge en el botón de mesa
+                var btn = tableButtons[String(mesa)];
+                if (!btn) {
+                    // Intentar con número
+                    btn = tableButtons[parseInt(mesa, 10)];
+                }
+                if (btn) {
+                    btn.classList.add('mesa-lista');
+                    if (!btn.querySelector('.mesa-lista-badge')) {
+                        var badge = document.createElement('span');
+                        badge.className = 'mesa-lista-badge';
+                        badge.textContent = '✓';
+                        btn.appendChild(badge);
+                    }
+                }
             }
 
             modalClose.addEventListener('click', closeModal);

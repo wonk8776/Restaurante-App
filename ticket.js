@@ -125,11 +125,12 @@
     }
 
     // ─── Abre ventana nueva e imprime (título para cabecera de impresión; @page margin:0 para reducir cabeceras del navegador) ───
-    function abrirVentanaTicket(bodyContent) {
-        var html = '<!DOCTYPE html><html lang="es"><head><meta charset="utf-8"><title>FAMILIA GONZÁLEZ — Ticket</title><style>' +
+    function abrirVentanaTicket(bodyContent, nombreRestaurante) {
+        var tituloPagina = escapeHtml(nombreRestaurante || 'Ticket');
+        var html = '<!DOCTYPE html><html lang="es"><head><meta charset="utf-8"><title>' + tituloPagina + ' — Ticket</title><style>' +
             ticketStylesPrint() +
             '</style></head><body>' + bodyContent +
-            '<script>window.onload=function(){document.title="FAMILIA GONZÁLEZ"; setTimeout(function(){window.print();},400);};<\/script>' +
+            '<script>window.onload=function(){document.title="' + tituloPagina.replace(/"/g, '\\"') + '"; setTimeout(function(){window.print();},400);};<\/script>' +
             '</body></html>';
         var w = window.open('', '_blank', 'width=260,height=700');
         if (!w) {
@@ -203,10 +204,10 @@
     }
 
     // ─── Body de ORDEN para impresión (flex) ───
-    function buildBodyOrdenPrint(mesa, meseroNombre, fechaStr, platillos, total) {
+    function buildBodyOrdenPrint(mesa, meseroNombre, fechaStr, platillos, total, nombreRestaurante) {
         var totalFormatted = Number(total).toLocaleString('es-MX', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
         return '<div class="ticket-logo-svg">' + logoSVG() + '</div>' +
-            '<div class="ticket-nombre">FAMILIA GONZÁLEZ</div>' +
+            '<div class="ticket-nombre">' + escapeHtml(nombreRestaurante) + '</div>' +
             '<div class="ticket-fecha">' + escapeHtml(fechaStr) + '</div>' +
             '<div class="ticket-sep-doble"></div>' +
             '<div class="ticket-detalles">' +
@@ -225,10 +226,10 @@
     }
 
     // ─── Body de ORDEN para WhatsApp (tabla) ───
-    function buildBodyOrdenWhatsApp(mesa, meseroNombre, fechaStr, platillos, total) {
+    function buildBodyOrdenWhatsApp(mesa, meseroNombre, fechaStr, platillos, total, nombreRestaurante) {
         var totalFormatted = Number(total).toLocaleString('es-MX', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
         return '<div class="ticket-logo-svg">' + logoSVG() + '</div>' +
-            '<div class="ticket-nombre">FAMILIA GONZÁLEZ</div>' +
+            '<div class="ticket-nombre">' + escapeHtml(nombreRestaurante) + '</div>' +
             '<div class="ticket-fecha">' + escapeHtml(fechaStr) + '</div>' +
             '<div class="ticket-sep-doble"></div>' +
             '<div class="ticket-detalles">' +
@@ -247,10 +248,10 @@
     }
 
     // ─── Body de COTIZACIÓN para impresión (flex) ───
-    function buildBodyCotizacionPrint(titulo, detalles, fechaStr, platillos, total) {
+    function buildBodyCotizacionPrint(titulo, detalles, fechaStr, platillos, total, nombreRestaurante) {
         var totalFormatted = Number(total).toLocaleString('es-MX', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
         return '<div class="ticket-logo-svg">' + logoSVG() + '</div>' +
-            '<div class="ticket-nombre">FAMILIA GONZÁLEZ</div>' +
+            '<div class="ticket-nombre">' + escapeHtml(nombreRestaurante) + '</div>' +
             '<div class="ticket-fecha">' + escapeHtml(fechaStr) + '</div>' +
             '<div class="ticket-sep-doble"></div>' +
             '<div class="ticket-detalles">' +
@@ -269,10 +270,10 @@
     }
 
     // ─── Body de COTIZACIÓN para WhatsApp (tabla) ───
-    function buildBodyCotizacionWhatsApp(titulo, detalles, fechaStr, platillos, total) {
+    function buildBodyCotizacionWhatsApp(titulo, detalles, fechaStr, platillos, total, nombreRestaurante) {
         var totalFormatted = Number(total).toLocaleString('es-MX', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
         return '<div class="ticket-logo-svg">' + logoSVG() + '</div>' +
-            '<div class="ticket-nombre">FAMILIA GONZÁLEZ</div>' +
+            '<div class="ticket-nombre">' + escapeHtml(nombreRestaurante) + '</div>' +
             '<div class="ticket-fecha">' + escapeHtml(fechaStr) + '</div>' +
             '<div class="ticket-sep-doble"></div>' +
             '<div class="ticket-detalles">' +
@@ -288,6 +289,16 @@
             '<div class="ticket-sep-punto"></div>' +
             '<div class="ticket-pie">Gracias por su preferencia. ¡Lo esperamos pronto!</div>' +
             '<div class="ticket-qr-placeholder">Dénos su opinión</div>';
+    }
+
+    // ─── Nombre del restaurante desde Firestore ───
+    function getNombreRestaurante() {
+        if (typeof db === 'undefined') return Promise.resolve('Mi Restaurante');
+        return db.collection('configuracion').doc('restaurante').get()
+            .then(function (doc) {
+                return (doc.exists && doc.data().nombre) ? doc.data().nombre : 'Mi Restaurante';
+            })
+            .catch(function () { return 'Mi Restaurante'; });
     }
 
     // ─── Helpers Firestore ───
@@ -361,8 +372,10 @@
             else alert('Recarga la página e intenta de nuevo.');
             return;
         }
-        leerOrden(ordenId, function (mesa, mesero, fecha, platillos, total) {
-            abrirVentanaTicket(buildBodyOrdenPrint(mesa, mesero, fecha, platillos, total));
+        getNombreRestaurante().then(function (nombre) {
+            leerOrden(ordenId, function (mesa, mesero, fecha, platillos, total) {
+                abrirVentanaTicket(buildBodyOrdenPrint(mesa, mesero, fecha, platillos, total, nombre), nombre);
+            });
         });
     }
 
@@ -372,8 +385,10 @@
             else alert('Recarga la página e intenta de nuevo.');
             return;
         }
-        leerOrden(ordenId, function (mesa, mesero, fecha, platillos, total) {
-            generarImagenWhatsApp(buildBodyOrdenWhatsApp(mesa, mesero, fecha, platillos, total), 'ticket-mesa-' + mesa + '.png');
+        getNombreRestaurante().then(function (nombre) {
+            leerOrden(ordenId, function (mesa, mesero, fecha, platillos, total) {
+                generarImagenWhatsApp(buildBodyOrdenWhatsApp(mesa, mesero, fecha, platillos, total, nombre), 'ticket-mesa-' + mesa + '.png');
+            });
         });
     }
 
@@ -383,8 +398,10 @@
             else alert('Recarga la página e intenta de nuevo.');
             return;
         }
-        leerCotizacion(cotizacionId, function (titulo, detalles, fecha, platillos, total) {
-            abrirVentanaTicket(buildBodyCotizacionPrint(titulo, detalles, fecha, platillos, total));
+        getNombreRestaurante().then(function (nombre) {
+            leerCotizacion(cotizacionId, function (titulo, detalles, fecha, platillos, total) {
+                abrirVentanaTicket(buildBodyCotizacionPrint(titulo, detalles, fecha, platillos, total, nombre), nombre);
+            });
         });
     }
 
@@ -394,8 +411,10 @@
             else alert('Recarga la página e intenta de nuevo.');
             return;
         }
-        leerCotizacion(cotizacionId, function (titulo, detalles, fecha, platillos, total) {
-            generarImagenWhatsApp(buildBodyCotizacionWhatsApp(titulo, detalles, fecha, platillos, total), 'cotizacion-' + titulo.substring(0, 20).replace(/\s/g, '-') + '.png');
+        getNombreRestaurante().then(function (nombre) {
+            leerCotizacion(cotizacionId, function (titulo, detalles, fecha, platillos, total) {
+                generarImagenWhatsApp(buildBodyCotizacionWhatsApp(titulo, detalles, fecha, platillos, total, nombre), 'cotizacion-' + titulo.substring(0, 20).replace(/\s/g, '-') + '.png');
+            });
         });
     }
 

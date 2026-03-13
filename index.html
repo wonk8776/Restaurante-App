@@ -358,8 +358,9 @@
 
         /* Impresión térmica 80mm: ocultar todo excepto #ticket-container; sin cabeceras/pie del navegador (@page margin:0). Desactive "Encabezados y pie" en el diálogo de impresión. */
         @media print {
-            body:not(.print-reporte-semanal) > *:not(#ticket-container) { display: none !important; visibility: hidden !important; }
+            body:not(.print-reporte-semanal):not(.printing-corte) > *:not(#ticket-container) { display: none !important; visibility: hidden !important; }
             body.print-reporte-semanal #ticket-container { display: none !important; visibility: hidden !important; }
+            body.printing-corte #ticket-container { display: none !important; visibility: hidden !important; }
             body:not(.print-reporte-semanal) #ticket-container {
                 display: block !important;
                 visibility: visible !important;
@@ -819,6 +820,7 @@
                 </svg>
                 <span>RESTIQ</span>
             </span>
+            <div id="sidebarRestaurantName" class="sidebar-restaurant-name"></div>
             <ul class="nav-list">
                 <li><a href="#" data-section="dashboard" class="active"><span class="nav-icon" aria-hidden="true"><svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" width="20" height="20"><path stroke-linecap="round" stroke-linejoin="round" d="M3.75 6A2.25 2.25 0 016 3.75h2.25A2.25 2.25 0 0110.5 6v2.25a2.25 2.25 0 01-2.25 2.25H6a2.25 2.25 0 01-2.25-2.25V6zM3.75 15.75A2.25 2.25 0 016 13.5h2.25a2.25 2.25 0 012.25 2.25V18a2.25 2.25 0 01-2.25 2.25H6A2.25 2.25 0 013.75 18v-2.25zM13.5 6a2.25 2.25 0 012.25-2.25H18A2.25 2.25 0 0120.25 6v2.25A2.25 2.25 0 0118 10.5h-2.25a2.25 2.25 0 01-2.25-2.25V6zM13.5 15.75a2.25 2.25 0 012.25-2.25H18a2.25 2.25 0 012.25 2.25V18A2.25 2.25 0 0118 20.25h-2.25A2.25 2.25 0 0113.5 18v-2.25z"/></svg></span>Dashboard</a></li>
                 <li><a href="#" data-section="ordenes"><span class="nav-icon" aria-hidden="true"><svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" width="20" height="20"><path stroke-linecap="round" stroke-linejoin="round" d="M3.75 12h16.5m-16.5 3.75h16.5M3.75 19.5h16.5M5.625 4.5h12.75a1.875 1.875 0 010 3.75H5.625a1.875 1.875 0 010-3.75z"/></svg></span>Órdenes en vivo</a></li>
@@ -841,6 +843,7 @@
                                 <li><a href="#" data-section="reportes"><span class="nav-icon" aria-hidden="true"><svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" width="20" height="20"><path stroke-linecap="round" stroke-linejoin="round" d="M3 13.125C3 12.504 3.504 12 4.125 12h2.25c.621 0 1.125.504 1.125 1.125v6.75C7.5 20.496 6.996 21 6.375 21h-2.25A1.125 1.125 0 013 19.875v-6.75zM9.75 8.625c0-.621.504-1.125 1.125-1.125h2.25c.621 0 1.125.504 1.125 1.125v11.25c0 .621-.504 1.125-1.125 1.125h-2.25a1.125 1.125 0 01-1.125-1.125V8.625zM16.5 4.125c0-.621.504-1.125 1.125-1.125h2.25C20.496 3 21 3.504 21 4.125v15.75c0 .621-.504 1.125-1.125 1.125h-2.25a1.125 1.125 0 01-1.125-1.125V4.125z"/></svg></span>Reportes</a></li>
                                 <li><a href="#" data-section="reporte-semanal"><span class="nav-icon" aria-hidden="true"><svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" width="20" height="20"><path stroke-linecap="round" stroke-linejoin="round" d="M6.75 3v2.25M17.25 3v2.25M3 18.75V7.5a2.25 2.25 0 012.25-2.25h13.5A2.25 2.25 0 0121 7.5v11.25m-18 0A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75m-18 0v-7.5A2.25 2.25 0 015.25 9h13.5A2.25 2.25 0 0121 11.25v7.5"/></svg></span>Reporte Semanal</a></li>
                                 <li><a href="#" data-section="gastos"><span class="nav-icon" aria-hidden="true"><svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" width="20" height="20"><path stroke-linecap="round" stroke-linejoin="round" d="M2.25 18.75a60.07 60.07 0 0115.797 2.101c.727.198 1.453-.342 1.453-1.096V18.75M3.75 4.5v.75A.75.75 0 013 6h-.75m0 0v-.375c0-.621.504-1.125 1.125-1.125H20.25M2.25 6v9m18-10.5v.75c0 .414.336.75.75.75h.75m-1.5-1.5h.375c.621 0 1.125.504 1.125 1.125v9.75c0 .621-.504 1.125-1.125 1.125h-.375m1.5-1.5h1.125c.621 0 1.129.504 1.09 1.124a7.627 7.627 0 01-1.09 3.986 4.648 4.648 0 01-3.986-3.986 7.625 7.625 0 011.09-5.235M9 10.5h.375M9 9h3.621a2.25 2.25 0 011.06 4.31 2.25 2.25 0 01.95 2.19M9 15h3.621a2.25 2.25 0 011.06 4.31 2.25 2.25 0 01.95-2.19M9 12h.375"/></svg></span>Gastos</a></li>
+                                <li><a href="#" data-section="corte"><span class="nav-icon" aria-hidden="true"><svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" width="20" height="20"><path stroke-linecap="round" stroke-linejoin="round" d="M9 12h3.75M9 15h3.75M9 18h3.75m3 .75H18a2.25 2.25 0 002.25-2.25V6.108c0-1.135-.845-2.098-1.976-2.192a48.424 48.424 0 00-1.123-.08m-5.801 0c-.065.21-.1.433-.1.664 0 .414.336.75.75.75h4.5a.75.75 0 00.75-.75 2.25 2.25 0 00-.1-.664m-5.8 0A2.251 2.251 0 0113.5 2.25H15c1.012 0 1.867.668 2.15 1.586m-5.8 0c-.376.023-.75.05-1.124.08C9.095 4.01 8.25 4.973 8.25 6.108V8.25m0 0H4.875c-.621 0-1.125.504-1.125 1.125v11.25c0 .621.504 1.125 1.125 1.125h9.75c.621 0 1.125-.504 1.125-1.125V9.375c0-.621-.504-1.125-1.125-1.125H8.25zM6.75 12h.008v.008H6.75V12zm0 3h.008v.008H6.75V15zm0 3h.008v.008H6.75V18z"/></svg></span>Corte de Caja</a></li>
                             </ul>
                         </div>
                     </div>
@@ -922,6 +925,7 @@
                         <span id="notifIcon" style="font-size:1.2rem;cursor:pointer;" title="Nuevas órdenes">🔔</span>
                         <span id="notifCount" style="position:absolute;top:-6px;right:-6px;background:var(--color-error);color:white;border-radius:50%;width:18px;height:18px;font-size:0.65rem;font-weight:700;display:flex;align-items:center;justify-content:center;">0</span>
                     </div>
+                    <button id="btnSilenciar" type="button" aria-label="Toggle sonido notificaciones"></button>
                     <button type="button" class="btn-logout" id="btnLogout">Cerrar sesión</button>
                 </div>
             </header>
@@ -1123,6 +1127,11 @@
                                         <option value="Postres">Postres</option>
                                         <option value="Otros" selected>Otros</option>
                                     </select>
+                                </div>
+                                <div class="form-group">
+                                    <label for="platilloImagen">Foto del platillo (URL)</label>
+                                    <input type="url" id="platilloImagen" placeholder="https://ejemplo.com/foto.jpg">
+                                    <p style="color: var(--color-text-muted); font-size: 0.8rem; margin-top: 0.25rem;">Pega una URL de imagen. Déjalo vacío para usar las iniciales del platillo.</p>
                                 </div>
                                 <div style="display: flex; gap: 0.75rem; margin-top: 1.5rem; justify-content: flex-end;">
                                     <button type="button" class="btn btn-secondary" id="btnCancelarPlatillo">Cancelar</button>
@@ -1446,6 +1455,80 @@
                     </div>
                 </section>
 
+                <!-- Corte de Caja -->
+                <section id="section-corte" class="section">
+                    <h2 style="font-family: var(--font-heading); color: var(--color-primary); margin-bottom: 1rem;">Corte de Caja</h2>
+
+                    <!-- Filtro de fechas -->
+                    <div class="report-filters" style="margin-bottom: 1.5rem;">
+                        <div class="form-group" style="margin-bottom: 0;">
+                            <label for="corteDesde">Desde</label>
+                            <input type="datetime-local" id="corteDesde">
+                        </div>
+                        <div class="form-group" style="margin-bottom: 0;">
+                            <label for="corteHasta">Hasta</label>
+                            <input type="datetime-local" id="corteHasta">
+                        </div>
+                        <button type="button" class="btn btn-primary" id="btnGenerarCorte">Generar Corte</button>
+                    </div>
+
+                    <!-- Tarjetas de totales (llenado por JS) -->
+                    <div id="corteResumen"></div>
+
+                    <!-- Tabla de ventas -->
+                    <div style="margin-top: 1.5rem;">
+                        <h3 style="font-family: var(--font-heading); color: var(--color-primary); margin-bottom: 0.75rem;">Ventas</h3>
+                        <div class="table-wrap">
+                            <table>
+                                <thead>
+                                    <tr>
+                                        <th>Hora</th>
+                                        <th>Mesa</th>
+                                        <th>Mesero</th>
+                                        <th>Total</th>
+                                        <th>Método de Pago</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="corteVentasBody">
+                                    <tr><td colspan="5" class="msg-empty">Selecciona un período y pulsa Generar Corte.</td></tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+
+                    <!-- Tabla de gastos -->
+                    <div style="margin-top: 1.5rem;">
+                        <h3 style="font-family: var(--font-heading); color: var(--color-primary); margin-bottom: 0.75rem;">Gastos</h3>
+                        <div class="table-wrap">
+                            <table>
+                                <thead>
+                                    <tr>
+                                        <th>Hora</th>
+                                        <th>Descripción</th>
+                                        <th>Categoría</th>
+                                        <th>Monto</th>
+                                        <th>Método</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="corteGastosBody">
+                                    <tr><td colspan="5" class="msg-empty">Selecciona un período y pulsa Generar Corte.</td></tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+
+                    <!-- Desglose por mesero (llenado por JS) -->
+                    <div style="margin-top: 1.5rem;">
+                        <h3 style="font-family: var(--font-heading); color: var(--color-primary); margin-bottom: 0.75rem;">Desglose por Mesero</h3>
+                        <div id="corteDesgloseMeseros"></div>
+                    </div>
+
+                    <!-- Botón imprimir -->
+                    <div style="margin-top: 2rem;">
+                        <button type="button" class="btn btn-secondary" id="btnImprimirCorte">Imprimir / Guardar PDF</button>
+                    </div>
+                </section>
+
                 <!-- Mantenimiento -->
                 <section id="section-mantenimiento" class="section">
                     <h2 style="font-family: var(--font-heading); color: var(--color-primary); margin-bottom: 1rem;">Mantenimiento de Base de Datos</h2>
@@ -1558,6 +1641,29 @@
                         <span id="configRestauranteMensaje" style="margin-left: 1rem; color: var(--color-success); display: none;">¡Guardado!</span>
                     </div>
 
+                    <!-- Tarjeta PIN de Cocina (KDS) -->
+                    <div class="config-card" style="background: var(--color-card); border: 1px solid var(--color-border); border-radius: 8px; padding: 1.5rem; max-width: 860px; width: 100%; margin-bottom: 1.5rem;">
+                        <h3 style="font-family: var(--font-heading); color: var(--color-primary); margin-bottom: 0.5rem; font-size: 1rem;">Acceso a Cocina (KDS)</h3>
+                        <p class="config-descripcion" style="color: var(--color-text-muted); font-size: 0.85rem; margin-bottom: 1rem;">PIN de 4 dígitos para acceder a la pantalla de cocina</p>
+                        <div class="config-pin-row" style="display: flex; align-items: center; gap: 0.75rem; flex-wrap: wrap; margin-bottom: 0.75rem;">
+                            <input
+                                type="number"
+                                id="inputPinCocina"
+                                class="config-input"
+                                placeholder="1234"
+                                min="1000"
+                                max="9999"
+                                maxlength="4"
+                                style="max-width: 120px;"
+                            >
+                            <button type="button" class="btn" id="btnGuardarPin">Guardar PIN</button>
+                        </div>
+                        <p id="msgPin" style="display:none; color: var(--color-success); font-size: 0.85rem; margin-bottom: 0.75rem;"></p>
+                        <div class="config-link-cocina">
+                            <a id="linkCocina" href="cocina.html" target="_blank" style="color: var(--color-primary); font-size: 0.9rem; font-weight: 600; text-decoration: none;">🍳 Abrir pantalla de cocina</a>
+                        </div>
+                    </div>
+
                     <!-- Tarjeta de Configuración de Mesas existente -->
                     <div class="config-card" style="background: var(--color-card); border: 1px solid var(--color-border); border-radius: 8px; padding: 1.25rem; max-width: 860px; width: 100%;">
                         <h3 style="font-family: var(--font-heading); color: var(--color-primary); margin-bottom: 1rem; font-size: 1rem;">Mesas disponibles</h3>
@@ -1606,6 +1712,27 @@
                     <button type="button" class="btn-metodo-pago btn btn-secondary" data-metodo="tarjeta">💳 Tarjeta</button>
                     <button type="button" class="btn-metodo-pago btn btn-secondary" data-metodo="transferencia">📱 Transferencia</button>
                 </div>
+                <hr class="modal-separador">
+                <div style="display:flex;flex-direction:column;gap:1rem;margin-bottom:1rem;">
+                    <div>
+                        <label for="cortePropina">Propina (opcional)</label>
+                        <input type="number" id="cortePropina" placeholder="$0.00" min="0" step="0.01">
+                        <small>Se suma al total cobrado</small>
+                    </div>
+                    <div>
+                        <label for="corteDescuento">Descuento (opcional)</label>
+                        <input type="number" id="corteDescuento" placeholder="$0.00" min="0" step="0.01">
+                        <small>Se resta al total de la orden</small>
+                    </div>
+                    <div>
+                        <label>
+                            <input type="checkbox" id="corteCortesia">
+                            Cortesía de la casa
+                        </label>
+                        <small>El total se vuelve $0. Se conserva el registro.</small>
+                    </div>
+                </div>
+                <div id="resumenCobro"></div>
                 <button type="button" id="btnCancelarMetodoPago" class="btn btn-secondary" style="width:100%;">Cancelar</button>
             </div>
         </div>

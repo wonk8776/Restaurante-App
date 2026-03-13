@@ -26,11 +26,13 @@
     }
 
     // --- Referencias DOM ---
+    var sonidoActivo = localStorage.getItem('restiq_sonido') !== 'off';
     var adminNameEl = document.getElementById('adminName');
     var headerTitleEl = document.getElementById('headerTitle');
     var btnLogout = document.getElementById('btnLogout');
     var navLinks = document.querySelectorAll('.nav-list a');
     var sections = document.querySelectorAll('.section');
+    var btnSilenciar = document.getElementById('btnSilenciar');
 
     // Dashboard
     var ventasDiaEl = document.getElementById('ventasDia');
@@ -43,9 +45,14 @@
     var ordenesConocidas = null;
     var contadorNuevas = 0;
     var ordenPendientePago = null;
+    var totalOrdenActual = 0;
     var modalMetodoPago = document.getElementById('modalMetodoPago');
     var btnCancelarMetodoPago = document.getElementById('btnCancelarMetodoPago');
     var btnCerrarModalMetodoPago = document.getElementById('btnCerrarModalMetodoPago');
+    var inputCortePropina = document.getElementById('cortePropina');
+    var inputCorteDescuento = document.getElementById('corteDescuento');
+    var inputCorteCortesia = document.getElementById('corteCortesia');
+    var divResumenCobro = document.getElementById('resumenCobro');
 
     // Menú
     var menuFilterPills = document.getElementById('menuFilterPills');
@@ -56,6 +63,7 @@
     var platilloNombre = document.getElementById('platilloNombre');
     var platilloPrecio = document.getElementById('platilloPrecio');
     var platilloCategoria = document.getElementById('platilloCategoria');
+    var platilloImagen = document.getElementById('platilloImagen');
     var btnGuardarPlatillo = document.getElementById('btnGuardarPlatillo');
     var btnCancelarPlatillo = document.getElementById('btnCancelarPlatillo');
 
@@ -450,7 +458,7 @@
                 listaMeseros.forEach(function (m) {
                     var row = document.createElement('div');
                     row.className = 'reporte-fila';
-                    row.innerHTML = '<span class="reporte-fila-label">' + escapeHtml(m.nombre || '—') + '</span><span class="reporte-fila-valor">$' + m.total.toFixed(2) + '</span>';
+                    row.innerHTML = '<span class="reporte-fila-label">' + escapeHtml(m.nombre || '—') + '</span><span class="reporte-fila-valor">' + formatearDinero(m.total) + '</span>';
                     rsRanking.appendChild(row);
                 });
             }
@@ -462,9 +470,9 @@
                 ordenDias.forEach(function (idx) {
                     var row = document.createElement('div');
                     row.className = 'reporte-fila';
-                    var val = (ventasPorDiaSemana[idx] || 0).toFixed(2);
+                    var val = ventasPorDiaSemana[idx] || 0;
                     var esPico = idx === diaPicoIdx;
-                    var valorHtml = '$' + val + (esPico ? ' ★' : '');
+                    var valorHtml = formatearDinero(val) + (esPico ? ' ★' : '');
                     row.innerHTML = '<span class="reporte-fila-label">' + nombresDia[idx] + '</span><span class="reporte-fila-valor"' + (esPico ? ' style="color:var(--color-primary);font-weight:700;"' : '') + '>' + valorHtml + '</span>';
                     rsVentasPorDia.appendChild(row);
                 });
@@ -669,9 +677,8 @@
     }
 
     function actualizarHeaderConMarca() {
-        var headerTitle = document.getElementById('headerTitle');
-        // De momento solo dejamos el hook para usar la marca en el futuro.
-        // if (headerTitle && configuracionRestaurante.nombre) { ... }
+        var el = document.getElementById('sidebarRestaurantName');
+        if (el) el.textContent = configuracionRestaurante.nombre || 'Mi Restaurante';
     }
 
     // --- Nombre del admin + carga de configuración global ---
@@ -713,18 +720,65 @@
 
     // --- Función global de formateo de dinero ---
     function formatearDinero(valor) {
-        var moneda = configuracionRestaurante && configuracionRestaurante.moneda ? configuracionRestaurante.moneda : 'USD';
-        var simbolo;
-        if (moneda === 'EUR') simbolo = '€';
-        else simbolo = '$'; // USD, MXN, COP usan $
-        var num = Number(valor) || 0;
-        return simbolo + num.toFixed(2);
+        var moneda = configuracionRestaurante && configuracionRestaurante.moneda ? configuracionRestaurante.moneda : 'MXN';
+        var locale = 'es-MX';
+        var currency = moneda === 'EUR' ? 'EUR' : moneda === 'USD' ? 'USD' : 'MXN';
+        return Number(valor || 0).toLocaleString(locale, {
+            style: 'currency',
+            currency: currency,
+            minimumFractionDigits: 2,
+            maximumFractionDigits: 2
+        });
     }
 
     // Botón para guardar configuración de restaurante
     var btnGuardarConfigRestaurante = document.getElementById('btnGuardarConfigRestaurante');
     if (btnGuardarConfigRestaurante) {
         btnGuardarConfigRestaurante.addEventListener('click', guardarConfiguracionRestaurante);
+    }
+
+    // --- PIN de Cocina (KDS) ---
+    var inputPinCocina = document.getElementById('inputPinCocina');
+    var btnGuardarPin = document.getElementById('btnGuardarPin');
+    var msgPin = document.getElementById('msgPin');
+
+    // Cargar PIN actual desde Firestore
+    db.collection('configuracion').doc('restaurante').get()
+        .then(function (doc) {
+            if (doc.exists && doc.data().pinCocina) {
+                if (inputPinCocina) inputPinCocina.value = doc.data().pinCocina;
+            }
+        });
+
+    // Prevenir más de 4 dígitos
+    if (inputPinCocina) {
+        inputPinCocina.addEventListener('input', function () {
+            if (this.value.length > 4) this.value = this.value.slice(0, 4);
+        });
+    }
+
+    // Guardar PIN
+    if (btnGuardarPin) {
+        btnGuardarPin.addEventListener('click', function () {
+            var pin = inputPinCocina ? inputPinCocina.value.trim() : '';
+            if (!/^\d{4}$/.test(pin)) {
+                showToastSafe('El PIN debe ser exactamente 4 dígitos', 'error');
+                return;
+            }
+            db.collection('configuracion').doc('restaurante')
+                .set({ pinCocina: pin }, { merge: true })
+                .then(function () {
+                    showToastSafe('PIN actualizado correctamente', 'success');
+                    if (msgPin) {
+                        msgPin.textContent = 'PIN guardado';
+                        msgPin.style.display = 'block';
+                        setTimeout(function () { msgPin.style.display = 'none'; }, 3000);
+                    }
+                })
+                .catch(function () {
+                    showToastSafe('Error al guardar el PIN', 'error');
+                });
+        });
     }
 
     // --- Helpers fecha (inicio/fin del día) ---
@@ -1026,6 +1080,18 @@
 
     function abrirModalMetodoPago() {
         if (!modalMetodoPago) return;
+        if (inputCortePropina) { inputCortePropina.value = ''; inputCortePropina.disabled = false; }
+        if (inputCorteDescuento) { inputCorteDescuento.value = ''; inputCorteDescuento.disabled = false; }
+        if (inputCorteCortesia) inputCorteCortesia.checked = false;
+        totalOrdenActual = 0;
+        if (ordenPendientePago) {
+            db.collection('ordenes').doc(ordenPendientePago).get().then(function (doc) {
+                totalOrdenActual = (doc.exists && doc.data().total) ? Number(doc.data().total) : 0;
+                actualizarResumenCobro();
+            });
+        } else {
+            actualizarResumenCobro();
+        }
         modalMetodoPago.classList.add('open');
         modalMetodoPago.style.display = 'flex';
     }
@@ -1054,10 +1120,20 @@
             if (esPagada && metodoPago) updatePayload.metodoPago = metodoPago;
             db.collection('ordenes').doc(id).update(updatePayload).then(function () {
                 if (esPagada) {
+                    var esCortesia = inputCorteCortesia ? inputCorteCortesia.checked : false;
+                    var descGuardado = inputCorteDescuento ? (parseFloat(inputCorteDescuento.value) || 0) : 0;
+                    var propGuardada = inputCortePropina ? (parseFloat(inputCortePropina.value) || 0) : 0;
+                    var totalOrig = totalOrdenActual || (data.total ? Number(data.total) : 0);
+                    var tFinal = esCortesia ? 0 : (totalOrig - descGuardado + propGuardada);
                     var venta = {
                         mesa: data.mesa || '',
                         platillos: data.platillos || [],
-                        total: data.total || 0,
+                        total: tFinal,
+                        totalOriginal: totalOrig,
+                        totalFinal: tFinal,
+                        propina: propGuardada,
+                        descuento: descGuardado,
+                        cortesia: esCortesia,
                         meseroNombre: data.meseroNombre || '',
                         timestamp: firebase.firestore.FieldValue.serverTimestamp()
                     };
@@ -1069,6 +1145,54 @@
             });
         });
     }
+
+    function actualizarResumenCobro() {
+        if (!divResumenCobro) return;
+        var cortesia = inputCorteCortesia ? inputCorteCortesia.checked : false;
+        var descuentoAplicado = 0;
+        var propinaAplicada = 0;
+        var totalFinal = 0;
+
+        if (cortesia) {
+            descuentoAplicado = totalOrdenActual;
+            propinaAplicada = 0;
+            totalFinal = 0;
+            if (inputCortePropina) { inputCortePropina.value = '0'; inputCortePropina.disabled = true; }
+            if (inputCorteDescuento) { inputCorteDescuento.value = '0'; inputCorteDescuento.disabled = true; }
+        } else {
+            if (inputCortePropina) inputCortePropina.disabled = false;
+            if (inputCorteDescuento) inputCorteDescuento.disabled = false;
+            descuentoAplicado = inputCorteDescuento ? (parseFloat(inputCorteDescuento.value) || 0) : 0;
+            if (descuentoAplicado > totalOrdenActual) {
+                showToast('El descuento no puede superar el total', 'error');
+                if (inputCorteDescuento) inputCorteDescuento.value = '0';
+                descuentoAplicado = 0;
+            }
+            propinaAplicada = inputCortePropina ? (parseFloat(inputCortePropina.value) || 0) : 0;
+            totalFinal = totalOrdenActual - descuentoAplicado + propinaAplicada;
+        }
+
+        function fmt(v) { return Number(v).toLocaleString('es-MX', { style: 'currency', currency: 'MXN' }); }
+
+        var filaDescuento = descuentoAplicado > 0
+            ? '<div class="resumen-fila descuento"><span>Descuento</span><span>- ' + fmt(descuentoAplicado) + '</span></div>'
+            : '';
+        var filaPropina = propinaAplicada > 0
+            ? '<div class="resumen-fila propina"><span>Propina</span><span>+ ' + fmt(propinaAplicada) + '</span></div>'
+            : '';
+
+        divResumenCobro.innerHTML =
+            '<div class="resumen-cobro-detalle">' +
+            '<div class="resumen-fila"><span>Total orden</span><span>' + fmt(totalOrdenActual) + '</span></div>' +
+            filaDescuento +
+            filaPropina +
+            '<div class="resumen-fila total-final"><span>TOTAL A COBRAR</span><span>' + fmt(totalFinal) + '</span></div>' +
+            '</div>';
+    }
+
+    if (inputCortePropina) inputCortePropina.addEventListener('input', actualizarResumenCobro);
+    if (inputCorteDescuento) inputCorteDescuento.addEventListener('input', actualizarResumenCobro);
+    if (inputCorteCortesia) inputCorteCortesia.addEventListener('change', actualizarResumenCobro);
 
     // Modal método de pago: botones y cancelar
     if (modalMetodoPago) {
@@ -1162,19 +1286,29 @@
     
                 var urgentClass = (estadoRaw !== 'pagada' && estadoRaw !== 'cancelada' && elapsedMin >= 15) ? ' order-urgent' : '';
     
-                // Items HTML
-                var itemsHtml = '';
-                if (Array.isArray(data.platillos) && data.platillos.length > 0) {
-                    itemsHtml = data.platillos.map(function (p) {
-                        var nombre = (p && p.nombre) ? p.nombre : (typeof p === 'string' ? p : '—');
-                        var cant = (p && p.cantidad) ? p.cantidad : 1;
-                        return '<li class="order-item"><span class="order-item-qty">' + cant + '</span><span class="order-item-name">' + escapeHtml(nombre) + '</span></li>';
-                    }).join('');
-                } else {
-                    itemsHtml = '<li class="order-item"><span class="order-item-qty">0</span><span class="order-item-name">—</span></li>';
+        // Items HTML
+        var itemsHtml = '';
+        if (Array.isArray(data.platillos) && data.platillos.length > 0) {
+            itemsHtml = data.platillos.map(function (p) {
+                var nombre = (p && p.nombre) ? p.nombre : (typeof p === 'string' ? p : '—');
+                var cant = (p && p.cantidad) ? p.cantidad : 1;
+                var nota = (p && p.nota) ? String(p.nota).trim() : '';
+                var notaHtml = '';
+                if (nota) {
+                    notaHtml = '<span class="nota-platillo-display">→ ' + escapeHtml(nota) + '</span>';
                 }
+                return '<li class="order-item"><span class="order-item-qty">' + cant + '</span><span class="order-item-name">' + escapeHtml(nombre) + '</span>' + notaHtml + '</li>';
+            }).join('');
+        } else {
+            itemsHtml = '<li class="order-item"><span class="order-item-qty">0</span><span class="order-item-name">—</span></li>';
+        }
     
-                var totalStr = (data.total != null) ? formatearDinero(Number(data.total)) : '—';
+        var totalStr = (data.total != null) ? formatearDinero(Number(data.total)) : '—';
+        var notaOrdenStr = (data.notaOrden && String(data.notaOrden).trim()) || '';
+        var notaOrdenHtml = '';
+        if (notaOrdenStr) {
+            notaOrdenHtml = '<div class="nota-orden-display"><span class="nota-orden-label">Nota:</span> ' + escapeHtml(notaOrdenStr) + '</div>';
+        }
     
                 // Botones de acción
                 var esPagadaOCancelada = estadoRaw === 'pagada' || estadoRaw === 'cancelada';
@@ -1200,6 +1334,7 @@
                     '<div class="order-card-body">' +
                     '<div class="order-card-mesero">' + escapeHtml(mesero) + '</div>' +
                     '<ul class="order-items">' + itemsHtml + '</ul>' +
+                    notaOrdenHtml +
                     '<div class="order-card-total">' + totalStr + '</div>' +
                     '</div>' +
                     '<div class="order-card-footer">' +
@@ -1257,6 +1392,30 @@
         return div.innerHTML;
     }
 
+    function actualizarIconoSilencio() {
+        if (!btnSilenciar) return;
+        if (sonidoActivo) {
+            btnSilenciar.textContent = '🔔';
+            btnSilenciar.title = 'Silenciar notificaciones';
+        } else {
+            btnSilenciar.textContent = '🔕';
+            btnSilenciar.title = 'Activar notificaciones';
+        }
+    }
+
+    if (btnSilenciar) {
+        actualizarIconoSilencio();
+        btnSilenciar.addEventListener('click', function () {
+            sonidoActivo = !sonidoActivo;
+            localStorage.setItem('restiq_sonido', sonidoActivo ? 'on' : 'off');
+            actualizarIconoSilencio();
+            showToastSafe(
+                sonidoActivo ? 'Notificaciones activadas' : 'Notificaciones silenciadas',
+                'info'
+            );
+        });
+    }
+
     var filtroOrdenActual = 'activas';
     var btnFiltroActivas = document.getElementById('filtroActivas');
     var btnFiltroPagadas = document.getElementById('filtroPagadas');
@@ -1290,18 +1449,20 @@
                                 adminToastHideTimeout = null;
                             }, 4000);
                         }
-                        try {
-                            var ctx = new (window.AudioContext || window.webkitAudioContext)();
-                            var o = ctx.createOscillator();
-                            var g = ctx.createGain();
-                            o.connect(g);
-                            g.connect(ctx.destination);
-                            o.frequency.value = 800;
-                            g.gain.setValueAtTime(0.15, ctx.currentTime);
-                            g.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.15);
-                            o.start(ctx.currentTime);
-                            o.stop(ctx.currentTime + 0.15);
-                        } catch (e) {}
+                        if (sonidoActivo) {
+                            try {
+                                var ctx = new (window.AudioContext || window.webkitAudioContext)();
+                                var o = ctx.createOscillator();
+                                var g = ctx.createGain();
+                                o.connect(g);
+                                g.connect(ctx.destination);
+                                o.frequency.value = 800;
+                                g.gain.setValueAtTime(0.15, ctx.currentTime);
+                                g.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.15);
+                                o.start(ctx.currentTime);
+                                o.stop(ctx.currentTime + 0.15);
+                            } catch (e) {}
+                        }
                     }
                 }
             });
@@ -1368,19 +1529,19 @@
     }
 
     // --- Menú ---
-    function agregarPlatillo(nombre, precio, categoria) {
+    function agregarPlatillo(nombre, precio, categoria, imagen) {
         if (!nombre || !nombre.trim()) return;
         var p = parseFloat(precio);
         if (isNaN(p) || p < 0) return;
         var cat = (categoria || 'Otros').trim();
-        return db.collection('menu').add({ nombre: nombre.trim(), precio: p, categoria: cat });
+        return db.collection('menu').add({ nombre: nombre.trim(), precio: p, categoria: cat, imagen: imagen || '' });
     }
 
-    function editarPlatillo(id, nombre, precio, categoria) {
+    function editarPlatillo(id, nombre, precio, categoria, imagen) {
         var p = parseFloat(precio);
         if (isNaN(p) || p < 0) return;
         var cat = (categoria || 'Otros').trim();
-        return db.collection('menu').doc(id).update({ nombre: (nombre || '').trim(), precio: p, categoria: cat });
+        return db.collection('menu').doc(id).update({ nombre: (nombre || '').trim(), precio: p, categoria: cat, imagen: imagen || '' });
     }
 
     function eliminarPlatillo(id) {
@@ -1518,11 +1679,10 @@
                 '<span class="product-card-meta">' + escapeHtml(item.categoria) + '</span>';
             var footer = document.createElement('div');
             footer.className = 'product-card-footer';
-            var precio = (item.precio != null) ? Number(item.precio).toFixed(2) : '0.00';
             footer.innerHTML = '<div class="product-card-actions">' +
-                '<button type="button" class="btn-sm btn-secondary editar-platillo" data-id="' + item.id + '" data-nombre="' + escapeHtml(item.nombre) + '" data-precio="' + (item.precio != null ? item.precio : '') + '" data-categoria="' + escapeHtml(item.categoria) + '">Editar</button> ' +
+                '<button type="button" class="btn-sm btn-secondary editar-platillo" data-id="' + item.id + '" data-nombre="' + escapeHtml(item.nombre) + '" data-precio="' + (item.precio != null ? item.precio : '') + '" data-categoria="' + escapeHtml(item.categoria) + '" data-imagen="' + escapeHtml(item.imagen || '') + '">Editar</button> ' +
                 '<button type="button" class="btn-sm btn-danger eliminar-platillo" data-id="' + item.id + '">Eliminar</button></div>' +
-                '<span class="product-card-price">$' + precio + '</span>';
+                '<span class="product-card-price">' + formatearDinero(item.precio) + '</span>';
             body.appendChild(footer);
             card.appendChild(body);
 
@@ -1535,9 +1695,11 @@
                 var nombre = btn.getAttribute('data-nombre') || '';
                 var precio = btn.getAttribute('data-precio') || '';
                 var categoria = btn.getAttribute('data-categoria') || 'Otros';
+                var imagen = btn.getAttribute('data-imagen') || '';
                 platilloNombre.value = nombre;
                 platilloPrecio.value = precio;
                 if (platilloCategoria) platilloCategoria.value = categoria;
+                if (platilloImagen) platilloImagen.value = imagen;
                 abrirModalPlatillo(id);
             });
         });
@@ -1582,6 +1744,7 @@
             platilloNombre.value = '';
             platilloPrecio.value = '';
             if (platilloCategoria) platilloCategoria.value = 'Otros';
+            if (platilloImagen) platilloImagen.value = '';
         }
         modalPlatillo.classList.add('open');
         modalPlatillo.style.display = 'flex';
@@ -1618,9 +1781,10 @@
             var nombre = platilloNombre.value.trim();
             var precio = platilloPrecio.value;
             var categoria = platilloCategoria ? platilloCategoria.value : 'Otros';
+            var imagenUrl = platilloImagen ? platilloImagen.value.trim() : '';
             var btn = this;
             setButtonLoading(btn, true);
-            var prom = editId ? editarPlatillo(editId, nombre, precio, categoria) : agregarPlatillo(nombre, precio, categoria);
+            var prom = editId ? editarPlatillo(editId, nombre, precio, categoria, imagenUrl) : agregarPlatillo(nombre, precio, categoria, imagenUrl);
             if (prom && typeof prom.then === 'function') {
                 prom.then(function () {
                     modalPlatillo.style.display = 'none';
@@ -2024,7 +2188,7 @@
             var filasIngresos = '';
             ventasList.forEach(function (v) {
                 var f = v.fecha ? v.fecha.toLocaleString('es') : '—';
-                filasIngresos += '<tr><td>' + escapeHtml(f) + '</td><td>' + escapeHtml(String(v.mesa)) + '</td><td>' + escapeHtml(String(v.mesero)) + '</td><td>$' + Number(v.total).toFixed(2) + '</td></tr>';
+                filasIngresos += '<tr><td>' + escapeHtml(f) + '</td><td>' + escapeHtml(String(v.mesa)) + '</td><td>' + escapeHtml(String(v.mesero)) + '</td><td>' + formatearDinero(v.total) + '</td></tr>';
             });
             if (ventasList.length === 0) {
                 filasIngresos = '<tr><td colspan="4" style="text-align:center;">No hay ventas en este período.</td></tr>';
@@ -2032,7 +2196,7 @@
             var filasGastos = '';
             gastosList.forEach(function (g) {
                 var f = g.fecha ? g.fecha.toLocaleString('es') : '—';
-                filasGastos += '<tr><td>' + escapeHtml(f) + '</td><td>' + escapeHtml(String(g.descripcion)) + '</td><td>' + escapeHtml(String(g.categoria)) + '</td><td>$' + Number(g.monto).toFixed(2) + '</td><td>' + escapeHtml(String(g.metodoPago)) + '</td></tr>';
+                filasGastos += '<tr><td>' + escapeHtml(f) + '</td><td>' + escapeHtml(String(g.descripcion)) + '</td><td>' + escapeHtml(String(g.categoria)) + '</td><td>' + formatearDinero(g.monto) + '</td><td>' + escapeHtml(String(g.metodoPago)) + '</td></tr>';
             });
             if (gastosList.length === 0) {
                 filasGastos = '<tr><td colspan="5" style="text-align:center;">No hay gastos en este período.</td></tr>';
@@ -2052,9 +2216,9 @@
                 '</style></head><body>' +
                 '<h1>Reporte Financiero — ' + escapeHtml(desde) + ' al ' + escapeHtml(hasta) + '</h1>' +
                 '<div class="resumen">' +
-                '<div class="resumen-item"><strong>Total Ingresos</strong><span>$' + totalIngresos.toFixed(2) + '</span></div>' +
-                '<div class="resumen-item"><strong>Total Gastos</strong><span>$' + totalGastos.toFixed(2) + '</span></div>' +
-                '<div class="resumen-item" style="' + saldoClase + '"><strong>Saldo Final</strong><span>$' + saldoFinal.toFixed(2) + '</span></div>' +
+                '<div class="resumen-item"><strong>Total Ingresos</strong><span>' + formatearDinero(totalIngresos) + '</span></div>' +
+                '<div class="resumen-item"><strong>Total Gastos</strong><span>' + formatearDinero(totalGastos) + '</span></div>' +
+                '<div class="resumen-item" style="' + saldoClase + '"><strong>Saldo Final</strong><span>' + formatearDinero(saldoFinal) + '</span></div>' +
                 '</div>' +
                 '<h2 style="font-size:1.1rem;margin-top:1.5rem;">Ingresos (ventas)</h2>' +
                 '<table><thead><tr><th>Fecha</th><th>Mesa</th><th>Mesero</th><th>Total</th></tr></thead><tbody>' + filasIngresos + '</tbody></table>' +
@@ -2461,7 +2625,7 @@
                 var opt = document.createElement('option');
                 opt.value = item.id;
                 opt.setAttribute('data-precio', String(item.precio));
-                opt.textContent = item.nombre + ' — $' + (item.precio != null ? Number(item.precio).toFixed(2) : '0.00');
+                opt.textContent = item.nombre + ' — ' + formatearDinero(item.precio);
                 optgroup.appendChild(opt);
             });
             selectPlatillo.appendChild(optgroup);
@@ -3024,6 +3188,252 @@
             cerrarModalEditarGasto();
             gastoEditandoId = null;
         });
+    }
+
+    // --- Corte de Caja ---
+    var corteDesdeEl = document.getElementById('corteDesde');
+    var corteHastaEl = document.getElementById('corteHasta');
+    var btnGenerarCorte = document.getElementById('btnGenerarCorte');
+    var corteResumenEl = document.getElementById('corteResumen');
+    var corteVentasBodyEl = document.getElementById('corteVentasBody');
+    var corteGastosBodyEl = document.getElementById('corteGastosBody');
+    var corteDesgloseMeserosEl = document.getElementById('corteDesgloseMeseros');
+    var btnImprimirCorte = document.getElementById('btnImprimirCorte');
+
+    function toDatetimeLocalValue(date) {
+        var yyyy = date.getFullYear();
+        var mm = String(date.getMonth() + 1).padStart(2, '0');
+        var dd = String(date.getDate()).padStart(2, '0');
+        var hh = String(date.getHours()).padStart(2, '0');
+        var min = String(date.getMinutes()).padStart(2, '0');
+        return yyyy + '-' + mm + '-' + dd + 'T' + hh + ':' + min;
+    }
+
+    function inicializarFechasCorte() {
+        var ahora = new Date();
+        var hoyInicio = new Date(ahora.getFullYear(), ahora.getMonth(), ahora.getDate(), 0, 0, 0);
+        if (corteDesdeEl) corteDesdeEl.value = toDatetimeLocalValue(hoyInicio);
+        if (corteHastaEl) corteHastaEl.value = toDatetimeLocalValue(ahora);
+    }
+
+    function renderCorte(ventasSnap, gastosSnap) {
+        function fmtCorte(valor) {
+            var num = Number(valor) || 0;
+            return num.toLocaleString('es-MX', { style: 'currency', currency: 'MXN' });
+        }
+
+        var ventas = [];
+        ventasSnap.forEach(function (doc) { ventas.push(doc.data()); });
+        var gastos = [];
+        gastosSnap.forEach(function (doc) { gastos.push(doc.data()); });
+
+        if (ventas.length === 0 && gastos.length === 0) {
+            if (corteResumenEl) corteResumenEl.innerHTML = '<p class="msg-empty">No hay registros en este período.</p>';
+            if (corteVentasBodyEl) corteVentasBodyEl.innerHTML = '<tr><td colspan="5" class="msg-empty">Sin ventas en este período.</td></tr>';
+            if (corteGastosBodyEl) corteGastosBodyEl.innerHTML = '<tr><td colspan="5" class="msg-empty">Sin gastos en este período.</td></tr>';
+            if (corteDesgloseMeserosEl) corteDesgloseMeserosEl.innerHTML = '';
+            return;
+        }
+
+        // Ordenar por fecha ascendente
+        ventas.sort(function (a, b) {
+            var ta = a.timestamp && a.timestamp.toDate ? a.timestamp.toDate() : new Date(a.timestamp || 0);
+            var tb = b.timestamp && b.timestamp.toDate ? b.timestamp.toDate() : new Date(b.timestamp || 0);
+            return ta - tb;
+        });
+        gastos.sort(function (a, b) {
+            var ta = a.fecha && a.fecha.toDate ? a.fecha.toDate() : new Date(a.fecha || 0);
+            var tb = b.fecha && b.fecha.toDate ? b.fecha.toDate() : new Date(b.fecha || 0);
+            return ta - tb;
+        });
+
+        // Totales
+        var totalVentas = 0;
+        var metodos = { efectivo: 0, tarjeta: 0, transferencia: 0, sinEspecificar: 0 };
+        ventas.forEach(function (v) {
+            var t = v.totalFinal !== undefined ? Number(v.totalFinal) : (Number(v.total) || 0);
+            totalVentas += t;
+            var m = v.metodoPago ? String(v.metodoPago).toLowerCase().trim() : '';
+            if (m === 'efectivo') metodos.efectivo += t;
+            else if (m === 'tarjeta') metodos.tarjeta += t;
+            else if (m === 'transferencia') metodos.transferencia += t;
+            else metodos.sinEspecificar += t;
+        });
+        var totalGastos = 0;
+        gastos.forEach(function (g) { totalGastos += Number(g.monto) || 0; });
+        var gananciaNeta = totalVentas - totalGastos;
+        var totalPropinas = ventas.reduce(function (acc, v) { return acc + (v.propina || 0); }, 0);
+
+        // Tarjetas de resumen
+        var metodosHtml = '';
+        if (metodos.efectivo > 0) {
+            metodosHtml += '<div class="card" style="padding:1rem;"><div class="card-title">Efectivo</div><div class="card-value" style="font-size:1.4rem;">' + fmtCorte(metodos.efectivo) + '</div></div>';
+        }
+        if (metodos.tarjeta > 0) {
+            metodosHtml += '<div class="card" style="padding:1rem;"><div class="card-title">Tarjeta</div><div class="card-value" style="font-size:1.4rem;">' + fmtCorte(metodos.tarjeta) + '</div></div>';
+        }
+        if (metodos.transferencia > 0) {
+            metodosHtml += '<div class="card" style="padding:1rem;"><div class="card-title">Transferencia</div><div class="card-value" style="font-size:1.4rem;">' + fmtCorte(metodos.transferencia) + '</div></div>';
+        }
+        if (metodos.sinEspecificar > 0) {
+            metodosHtml += '<div class="card" style="padding:1rem;"><div class="card-title">Sin especificar</div><div class="card-value" style="font-size:1.4rem;">' + fmtCorte(metodos.sinEspecificar) + '</div></div>';
+        }
+        var propinasHtml = totalPropinas > 0
+            ? '<div class="card" style="padding:1rem;"><div class="card-title">Propinas</div><div class="card-value" style="font-size:1.4rem;">' + fmtCorte(totalPropinas) + '</div></div>'
+            : '';
+        var gananciaColor = gananciaNeta >= 0 ? 'var(--color-success)' : 'var(--color-danger)';
+        if (corteResumenEl) {
+            corteResumenEl.innerHTML =
+                '<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:1rem;margin-bottom:1.5rem;">' +
+                '<div class="card" style="padding:1rem;"><div class="card-title">Total Ventas</div><div class="card-value" style="font-size:1.4rem;">' + fmtCorte(totalVentas) + '</div></div>' +
+                metodosHtml +
+                propinasHtml +
+                '<div class="card" style="padding:1rem;"><div class="card-title">Total Gastos</div><div class="card-value" style="font-size:1.4rem;color:var(--color-danger);">' + fmtCorte(totalGastos) + '</div></div>' +
+                '<div class="card" style="padding:1rem;"><div class="card-title">Ganancia Neta</div><div class="card-value" style="font-size:1.4rem;color:' + gananciaColor + ';">' + fmtCorte(gananciaNeta) + '</div></div>' +
+                '<div class="card" style="padding:1rem;"><div class="card-title">Total Órdenes</div><div class="card-value" style="font-size:1.4rem;">' + ventas.length + '</div></div>' +
+                '</div>';
+        }
+
+        // Tabla de ventas
+        if (corteVentasBodyEl) {
+            if (ventas.length === 0) {
+                corteVentasBodyEl.innerHTML = '<tr><td colspan="5" class="msg-empty">Sin ventas en este período.</td></tr>';
+            } else {
+                var filasV = '';
+                ventas.forEach(function (v) {
+                    var fecha = v.timestamp && v.timestamp.toDate ? v.timestamp.toDate() : new Date(v.timestamp || 0);
+                    var hora = String(fecha.getHours()).padStart(2, '0') + ':' + String(fecha.getMinutes()).padStart(2, '0');
+                    var metodo = v.metodoPago ? escapeHtml(String(v.metodoPago)) : 'Sin especificar';
+                    filasV += '<tr>' +
+                        '<td data-label="Hora">' + hora + '</td>' +
+                        '<td data-label="Mesa">' + escapeHtml(String(v.mesa || '—')) + '</td>' +
+                        '<td data-label="Mesero">' + escapeHtml(String(v.meseroNombre || '—')) + '</td>' +
+                        '<td data-label="Total">' + fmtCorte(v.totalFinal !== undefined ? v.totalFinal : v.total) + '</td>' +
+                        '<td data-label="Método de Pago">' + metodo + '</td>' +
+                        '</tr>';
+                });
+                corteVentasBodyEl.innerHTML = filasV;
+            }
+        }
+
+        // Tabla de gastos
+        if (corteGastosBodyEl) {
+            if (gastos.length === 0) {
+                corteGastosBodyEl.innerHTML = '<tr><td colspan="5" class="msg-empty">Sin gastos en este período.</td></tr>';
+            } else {
+                var filasG = '';
+                gastos.forEach(function (g) {
+                    var fecha = g.fecha && g.fecha.toDate ? g.fecha.toDate() : new Date(g.fecha || 0);
+                    var hora = String(fecha.getHours()).padStart(2, '0') + ':' + String(fecha.getMinutes()).padStart(2, '0');
+                    var metodo = g.metodoPago ? escapeHtml(String(g.metodoPago)) : 'Sin especificar';
+                    filasG += '<tr>' +
+                        '<td data-label="Hora">' + hora + '</td>' +
+                        '<td data-label="Descripción">' + escapeHtml(String(g.descripcion || '—')) + '</td>' +
+                        '<td data-label="Categoría">' + escapeHtml(String(g.categoria || '—')) + '</td>' +
+                        '<td data-label="Monto">' + fmtCorte(g.monto) + '</td>' +
+                        '<td data-label="Método">' + metodo + '</td>' +
+                        '</tr>';
+                });
+                corteGastosBodyEl.innerHTML = filasG;
+            }
+        }
+
+        // Desglose por mesero
+        if (corteDesgloseMeserosEl) {
+            var meseroMap = {};
+            ventas.forEach(function (v) {
+                var nombre = v.meseroNombre ? String(v.meseroNombre).trim() : 'Sin asignar';
+                if (!meseroMap[nombre]) meseroMap[nombre] = { total: 0, ordenes: 0, propinas: 0, metodos: {} };
+                meseroMap[nombre].total += v.totalFinal !== undefined ? Number(v.totalFinal) : (Number(v.total) || 0);
+                meseroMap[nombre].ordenes += 1;
+                meseroMap[nombre].propinas += (v.propina || 0);
+                var m = v.metodoPago ? String(v.metodoPago).toLowerCase().trim() : 'sin especificar';
+                meseroMap[nombre].metodos[m] = (meseroMap[nombre].metodos[m] || 0) + 1;
+            });
+            var meseroList = Object.keys(meseroMap).map(function (nombre) {
+                var data = meseroMap[nombre];
+                var metodoPrincipal = Object.keys(data.metodos).reduce(function (a, b) {
+                    return data.metodos[a] >= data.metodos[b] ? a : b;
+                }, 'sin especificar');
+                return { nombre: nombre, total: data.total, ordenes: data.ordenes, propinas: data.propinas, metodoPrincipal: metodoPrincipal };
+            });
+            meseroList.sort(function (a, b) { return b.total - a.total; });
+
+            var filasMeseros = '';
+            meseroList.forEach(function (m) {
+                filasMeseros += '<tr>' +
+                    '<td data-label="Mesero">' + escapeHtml(m.nombre) + '</td>' +
+                    '<td data-label="Órdenes">' + m.ordenes + '</td>' +
+                    '<td data-label="Total Vendido">' + fmtCorte(m.total) + '</td>' +
+                    '<td data-label="Propinas">' + fmtCorte(m.propinas) + '</td>' +
+                    '<td data-label="Método Frecuente">' + escapeHtml(m.metodoPrincipal) + '</td>' +
+                    '</tr>';
+            });
+            corteDesgloseMeserosEl.innerHTML =
+                '<div class="table-wrap">' +
+                '<table>' +
+                '<thead><tr><th>Mesero</th><th>Órdenes</th><th>Total Vendido</th><th>Propinas</th><th>Método Frecuente</th></tr></thead>' +
+                '<tbody>' + filasMeseros + '</tbody>' +
+                '</table>' +
+                '</div>';
+        }
+    }
+
+    function generarCorte() {
+        if (!corteDesdeEl || !corteHastaEl) return;
+        var fechaDesde = new Date(corteDesdeEl.value);
+        var fechaHasta = new Date(corteHastaEl.value);
+
+        if (isNaN(fechaDesde.getTime()) || isNaN(fechaHasta.getTime())) {
+            showToastSafe('Selecciona un rango de fechas válido.', 'error');
+            return;
+        }
+        if (fechaDesde >= fechaHasta) {
+            showToastSafe('La fecha de inicio debe ser anterior a la fecha de fin.', 'error');
+            return;
+        }
+
+        if (corteResumenEl) corteResumenEl.innerHTML = '<p class="msg-empty">Generando corte...</p>';
+        if (corteVentasBodyEl) corteVentasBodyEl.innerHTML = '<tr><td colspan="5" class="msg-empty">Cargando...</td></tr>';
+        if (corteGastosBodyEl) corteGastosBodyEl.innerHTML = '<tr><td colspan="5" class="msg-empty">Cargando...</td></tr>';
+        if (corteDesgloseMeserosEl) corteDesgloseMeserosEl.innerHTML = '';
+
+        var tsDesde = firebase.firestore.Timestamp.fromDate(fechaDesde);
+        var tsHasta = firebase.firestore.Timestamp.fromDate(fechaHasta);
+
+        var pVentas = db.collection('ventas')
+            .where('timestamp', '>=', tsDesde)
+            .where('timestamp', '<=', tsHasta)
+            .get();
+        var pGastos = db.collection('gastos')
+            .where('fecha', '>=', tsDesde)
+            .where('fecha', '<=', tsHasta)
+            .get();
+
+        Promise.all([pVentas, pGastos]).then(function (results) {
+            renderCorte(results[0], results[1]);
+        }).catch(function (err) {
+            console.error('Error al generar corte:', err);
+            showToastSafe('Error al generar el corte', 'error');
+            if (corteResumenEl) corteResumenEl.innerHTML = '';
+        });
+    }
+
+    if (btnGenerarCorte) {
+        btnGenerarCorte.addEventListener('click', generarCorte);
+    }
+    if (btnImprimirCorte) {
+        btnImprimirCorte.addEventListener('click', function () {
+            document.body.classList.add('printing-corte');
+            window.print();
+            document.body.classList.remove('printing-corte');
+        });
+    }
+
+    // Pre-rellenar fechas al entrar a la sección
+    var corteNavLink = document.querySelector('.nav-list a[data-section="corte"]');
+    if (corteNavLink) {
+        corteNavLink.addEventListener('click', inicializarFechasCorte);
     }
 
     // --- Grupos colapsables del nav ---

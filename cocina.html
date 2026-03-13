@@ -1,0 +1,718 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Cocina — KDS</title>
+
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      background: #0a0a0a;
+      color: #ffffff;
+      font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+      min-height: 100vh;
+    }
+
+    /* ── LOGIN ─────────────────────────────────────────── */
+    #loginCocina {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      min-height: 100vh;
+      gap: 24px;
+      padding: 24px;
+    }
+
+    .login-box {
+      background: #1a1a1a;
+      border-radius: 16px;
+      padding: 40px 36px;
+      width: 100%;
+      max-width: 360px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 20px;
+      border: 1px solid #2a2a2a;
+    }
+
+    .login-titulo {
+      font-size: 2rem;
+      font-weight: 700;
+      letter-spacing: 1px;
+    }
+
+    .login-subtitulo {
+      font-size: 0.95rem;
+      color: #9ca3af;
+      text-align: center;
+    }
+
+    .pin-inputs {
+      display: flex;
+      gap: 12px;
+    }
+
+    .pin-digit {
+      width: 60px;
+      height: 60px;
+      text-align: center;
+      font-size: 1.8rem;
+      font-weight: 700;
+      background: #0a0a0a;
+      border: 2px solid #333;
+      border-radius: 10px;
+      color: #ffffff;
+      outline: none;
+      transition: border-color 0.15s;
+      /* oculta flechas en number */
+      -moz-appearance: textfield;
+      appearance: textfield;
+    }
+    .pin-digit::-webkit-outer-spin-button,
+    .pin-digit::-webkit-inner-spin-button { display: none; }
+    .pin-digit:focus { border-color: #f59e0b; }
+
+    #btnEntrarCocina {
+      width: 100%;
+      padding: 14px;
+      background: #f59e0b;
+      color: #000000;
+      font-size: 1rem;
+      font-weight: 700;
+      border: none;
+      border-radius: 10px;
+      cursor: pointer;
+      letter-spacing: 0.5px;
+      transition: opacity 0.15s;
+    }
+    #btnEntrarCocina:hover { opacity: 0.88; }
+
+    #pinError {
+      display: none;
+      color: #ef4444;
+      font-size: 0.875rem;
+      font-weight: 600;
+      text-align: center;
+    }
+
+    /* ── PANEL KDS ─────────────────────────────────────── */
+    #panelCocina {
+      display: flex;
+      flex-direction: column;
+      min-height: 100vh;
+    }
+
+    .kds-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 12px 20px;
+      background: #111111;
+      border-bottom: 1px solid #222;
+      position: sticky;
+      top: 0;
+      z-index: 10;
+      gap: 12px;
+    }
+
+    .kds-titulo {
+      font-size: 1.4rem;
+      font-weight: 800;
+      letter-spacing: 2px;
+      color: #f59e0b;
+    }
+
+    #contadorOrdenes {
+      font-size: 0.85rem;
+      color: #9ca3af;
+      background: #1a1a1a;
+      padding: 4px 12px;
+      border-radius: 20px;
+      border: 1px solid #2a2a2a;
+    }
+
+    #btnSalirCocina {
+      padding: 8px 18px;
+      background: transparent;
+      color: #9ca3af;
+      border: 1px solid #333;
+      border-radius: 8px;
+      cursor: pointer;
+      font-size: 0.85rem;
+      transition: color 0.15s, border-color 0.15s;
+    }
+    #btnSalirCocina:hover { color: #ef4444; border-color: #ef4444; }
+
+    /* ── GRID ──────────────────────────────────────────── */
+    #kdsGrid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+      gap: 16px;
+      padding: 16px;
+      align-content: start;
+    }
+
+    .kds-empty {
+      grid-column: 1 / -1;
+      text-align: center;
+      color: #9ca3af;
+      padding: 80px 20px;
+      font-size: 1.1rem;
+    }
+
+    /* ── TARJETA ───────────────────────────────────────── */
+    .kds-card {
+      background: #1a1a1a;
+      border-radius: 12px;
+      padding: 16px;
+      border-left: 4px solid #f59e0b;
+      box-shadow: 0 2px 12px rgba(0, 0, 0, 0.4);
+      display: flex;
+      flex-direction: column;
+      gap: 14px;
+    }
+
+    .kds-card[data-estado="preparando"] {
+      border-left-color: #3b82f6;
+    }
+
+    /* Header tarjeta */
+    .card-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      gap: 8px;
+    }
+
+    .card-mesa {
+      font-size: 1.6rem;
+      font-weight: 800;
+      color: #ffffff;
+      line-height: 1;
+    }
+
+    .card-meta {
+      display: flex;
+      flex-direction: column;
+      align-items: flex-end;
+      gap: 4px;
+    }
+
+    .card-mesero {
+      font-size: 0.78rem;
+      color: #9ca3af;
+    }
+
+    .card-hora {
+      font-size: 0.78rem;
+      color: #9ca3af;
+    }
+
+    .card-timer {
+      font-size: 0.85rem;
+      font-weight: 700;
+      padding: 2px 8px;
+      border-radius: 12px;
+      background: rgba(0,0,0,0.3);
+    }
+
+    /* Platillos */
+    .card-platillos {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+
+    .platillo-item {
+      display: flex;
+      align-items: flex-start;
+      gap: 10px;
+    }
+
+    .platillo-check {
+      width: 20px;
+      height: 20px;
+      margin-top: 2px;
+      accent-color: #10b981;
+      cursor: pointer;
+      flex-shrink: 0;
+    }
+
+    .platillo-info {
+      display: flex;
+      flex-direction: column;
+      gap: 2px;
+    }
+
+    .platillo-nombre {
+      font-size: 0.95rem;
+      font-weight: 700;
+      color: #ffffff;
+      transition: color 0.15s, text-decoration 0.15s, opacity 0.15s;
+    }
+
+    .platillo-nombre.marcado {
+      text-decoration: line-through;
+      opacity: 0.45;
+    }
+
+    .platillo-nota {
+      font-size: 0.8rem;
+      color: #f59e0b;
+      font-style: italic;
+    }
+
+    /* Nota general */
+    .card-nota-orden {
+      background: #2a1a00;
+      border: 1px solid #f59e0b;
+      border-radius: 8px;
+      padding: 10px 12px;
+      font-size: 0.85rem;
+      font-weight: 700;
+      color: #f59e0b;
+      text-transform: uppercase;
+      letter-spacing: 0.3px;
+    }
+
+    /* Botones de acción */
+    .card-acciones {
+      display: flex;
+      gap: 8px;
+    }
+
+    .btn-preparando {
+      flex: 1;
+      padding: 10px;
+      background: #1d4ed8;
+      color: #ffffff;
+      border: none;
+      border-radius: 8px;
+      font-size: 0.82rem;
+      font-weight: 700;
+      cursor: pointer;
+      transition: opacity 0.15s;
+      letter-spacing: 0.3px;
+    }
+    .btn-preparando:hover { opacity: 0.85; }
+
+    .btn-listo {
+      flex: 1;
+      padding: 10px;
+      background: #065f46;
+      color: #ffffff;
+      border: none;
+      border-radius: 8px;
+      font-size: 0.82rem;
+      font-weight: 700;
+      cursor: pointer;
+      transition: background 0.2s, opacity 0.15s;
+      letter-spacing: 0.3px;
+    }
+    .btn-listo:hover { opacity: 0.85; }
+
+    .btn-listo.todos-listos {
+      background: #10b981;
+      animation: pulsar 1.2s ease-in-out infinite;
+    }
+
+    @keyframes pulsar {
+      0%, 100% { box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.5); }
+      50%       { box-shadow: 0 0 0 8px rgba(16, 185, 129, 0); }
+    }
+
+    /* ── TOAST ─────────────────────────────────────────── */
+    #toast-container {
+      position: fixed;
+      bottom: 24px;
+      right: 24px;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      z-index: 9999;
+    }
+
+    .toast {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 12px 16px;
+      border-radius: 10px;
+      font-size: 0.9rem;
+      font-weight: 500;
+      background: #1a1a1a;
+      border: 1px solid #333;
+      color: #fff;
+      opacity: 0;
+      transform: translateX(20px);
+      transition: opacity 0.25s, transform 0.25s;
+      max-width: 300px;
+    }
+    .toast.toast-visible { opacity: 1; transform: translateX(0); }
+    .toast.toast--success { border-color: #10b981; }
+    .toast.toast--error   { border-color: #ef4444; }
+    .toast.toast--info    { border-color: #3b82f6; }
+    .toast-icon { display: flex; flex-shrink: 0; }
+  </style>
+</head>
+<body>
+
+  <!-- PANTALLA LOGIN PIN -->
+  <div id="loginCocina">
+    <div class="login-box">
+      <div class="login-titulo">🍳 Cocina</div>
+      <div class="login-subtitulo">Ingresa el PIN de acceso</div>
+
+      <div class="pin-inputs">
+        <input type="number" class="pin-digit" maxlength="1" min="0" max="9" inputmode="numeric" />
+        <input type="number" class="pin-digit" maxlength="1" min="0" max="9" inputmode="numeric" />
+        <input type="number" class="pin-digit" maxlength="1" min="0" max="9" inputmode="numeric" />
+        <input type="number" class="pin-digit" maxlength="1" min="0" max="9" inputmode="numeric" />
+      </div>
+
+      <div id="pinError">PIN incorrecto. Intenta de nuevo.</div>
+      <button id="btnEntrarCocina">Entrar</button>
+    </div>
+  </div>
+
+  <!-- PANEL KDS -->
+  <div id="panelCocina" style="display:none;">
+    <header class="kds-header">
+      <span class="kds-titulo">🍳 COCINA</span>
+      <span id="contadorOrdenes">0 órdenes activas</span>
+      <button id="btnSalirCocina">Salir</button>
+    </header>
+
+    <div id="kdsGrid"></div>
+  </div>
+
+  <!-- Firebase CDN (compat) -->
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
+
+  <script src="firebase-config.js"></script>
+  <script src="toasts.js"></script>
+
+  <script>
+    // ── Variables globales ──────────────────────────────
+    var sesionCocinaActiva = false;
+    var ordenesActuales = {};
+    var intervalTimer = null;
+    var unsubscribeKDS = null;
+
+    // ── Helpers ─────────────────────────────────────────
+    function calcularMinutos(timestamp) {
+      if (!timestamp) return 0;
+      var ms = timestamp.toDate ? timestamp.toDate().getTime() : new Date(timestamp).getTime();
+      return Math.floor((Date.now() - ms) / 60000);
+    }
+
+    function getColorTimer(minutos) {
+      if (minutos < 10) return '#10b981';
+      if (minutos <= 20) return '#f59e0b';
+      return '#ef4444';
+    }
+
+    function formatHora(timestamp) {
+      if (!timestamp) return '';
+      var d = timestamp.toDate ? timestamp.toDate() : new Date(timestamp);
+      return d.toLocaleTimeString('es-MX', { hour: '2-digit', minute: '2-digit' });
+    }
+
+    function pad(n) { return String(n).padStart(2, '0'); }
+
+    // ── PIN ─────────────────────────────────────────────
+    function verificarPIN() {
+      var digits = Array.from(document.querySelectorAll('.pin-digit'));
+      var pin = digits.map(function (el) { return el.value; }).join('');
+
+      if (pin.length < 4) {
+        mostrarPinError('Ingresa los 4 dígitos del PIN.');
+        return;
+      }
+
+      db.collection('configuracion').doc('restaurante').get()
+        .then(function (docSnap) {
+          var pinCorrecto = '1234';
+          if (docSnap.exists && docSnap.data().pinCocina) {
+            pinCorrecto = docSnap.data().pinCocina;
+          }
+
+          if (pin === pinCorrecto) {
+            sessionStorage.setItem('cocina_auth', 'true');
+            document.getElementById('loginCocina').style.display = 'none';
+            document.getElementById('panelCocina').style.display = 'flex';
+            sesionCocinaActiva = true;
+            iniciarKDS();
+          } else {
+            mostrarPinError('PIN incorrecto. Intenta de nuevo.');
+            digits.forEach(function (el) { el.value = ''; });
+            digits[0].focus();
+          }
+        })
+        .catch(function (err) {
+          mostrarPinError('Error al verificar PIN. Intenta de nuevo.');
+          console.error('Error verificarPIN:', err);
+        });
+    }
+
+    function mostrarPinError(msg) {
+      var el = document.getElementById('pinError');
+      el.textContent = msg;
+      el.style.display = 'block';
+      setTimeout(function () { el.style.display = 'none'; }, 3000);
+    }
+
+    // ── KDS ─────────────────────────────────────────────
+    function iniciarKDS() {
+      if (unsubscribeKDS) unsubscribeKDS();
+
+      unsubscribeKDS = db.collection('ordenes')
+        .where('estado', 'in', ['pendiente', 'preparando'])
+        .onSnapshot(renderKDS, function (err) {
+          console.error('KDS snapshot error:', err);
+          showToast('Error al cargar órdenes.', 'error');
+        });
+
+      if (intervalTimer) clearInterval(intervalTimer);
+      intervalTimer = setInterval(actualizarTimers, 60000);
+    }
+
+    function renderKDS(snap) {
+      ordenesActuales = {};
+      snap.forEach(function (doc) {
+        ordenesActuales[doc.id] = doc.data();
+      });
+
+      var total = snap.size;
+      document.getElementById('contadorOrdenes').textContent =
+        total + (total === 1 ? ' orden activa' : ' órdenes activas');
+
+      var docs = [];
+      snap.forEach(function (doc) { docs.push({ id: doc.id, data: doc.data() }); });
+
+      docs.sort(function (a, b) {
+        var ta = a.data.timestamp ? a.data.timestamp.toMillis() : 0;
+        var tb = b.data.timestamp ? b.data.timestamp.toMillis() : 0;
+        return ta - tb;
+      });
+
+      var grid = document.getElementById('kdsGrid');
+
+      if (docs.length === 0) {
+        grid.innerHTML = '<div class="kds-empty">✅ Sin órdenes pendientes</div>';
+        return;
+      }
+
+      var html = '';
+      docs.forEach(function (item) {
+        html += buildCardHTML(item.id, item.data);
+      });
+      grid.innerHTML = html;
+
+      docs.forEach(function (item) {
+        bindCardListeners(item.id, item.data);
+      });
+    }
+
+    function buildCardHTML(id, data) {
+      var platillos = Array.isArray(data.platillos) ? data.platillos : [];
+      var minutos = calcularMinutos(data.timestamp);
+      var colorTimer = getColorTimer(minutos);
+      var hora = formatHora(data.timestamp);
+      var estado = data.estado || 'pendiente';
+
+      var platillosHTML = platillos.map(function (p, idx) {
+        var notaHTML = (p.nota && p.nota.trim())
+          ? '<div class="platillo-nota">★ ' + escHtml(p.nota) + '</div>'
+          : '';
+        return '<div class="platillo-item" data-idx="' + idx + '">' +
+          '<input type="checkbox" class="platillo-check" data-order-id="' + id + '" data-idx="' + idx + '" />' +
+          '<div class="platillo-info">' +
+            '<div class="platillo-nombre">' + escHtml(p.cantidad) + '× ' + escHtml(p.nombre) + '</div>' +
+            notaHTML +
+          '</div>' +
+        '</div>';
+      }).join('');
+
+      var notaOrdenHTML = '';
+      if (data.notaOrden && data.notaOrden.trim()) {
+        notaOrdenHTML = '<div class="card-nota-orden">⚠ ' + escHtml(data.notaOrden) + '</div>';
+      }
+
+      var btnPreparandoHTML = '';
+      if (estado === 'pendiente') {
+        btnPreparandoHTML = '<button class="btn-preparando" data-order-id="' + id + '">EN PREPARACIÓN</button>';
+      }
+
+      var btnListoHTML = '<button class="btn-listo" data-order-id="' + id + '">✓ LISTO</button>';
+
+      return '<div class="kds-card" data-id="' + id + '" data-estado="' + estado + '">' +
+        '<div class="card-header">' +
+          '<div class="card-mesa">Mesa ' + escHtml(data.mesa) + '</div>' +
+          '<div class="card-meta">' +
+            '<div class="card-mesero">' + escHtml(data.meseroNombre || '') + '</div>' +
+            '<div class="card-hora">' + hora + '</div>' +
+            '<div class="card-timer" data-order-id="' + id + '" style="color:' + colorTimer + '">' +
+              minutos + ' min' +
+            '</div>' +
+          '</div>' +
+        '</div>' +
+        '<div class="card-platillos" data-order-id="' + id + '">' + platillosHTML + '</div>' +
+        notaOrdenHTML +
+        '<div class="card-acciones">' + btnPreparandoHTML + btnListoHTML + '</div>' +
+      '</div>';
+    }
+
+    function bindCardListeners(id, data) {
+      var card = document.querySelector('.kds-card[data-id="' + id + '"]');
+      if (!card) return;
+
+      // Checkboxes
+      var checks = card.querySelectorAll('.platillo-check');
+      checks.forEach(function (cb) {
+        cb.addEventListener('change', function () {
+          var nombreEl = cb.closest('.platillo-item').querySelector('.platillo-nombre');
+          if (cb.checked) {
+            nombreEl.classList.add('marcado');
+          } else {
+            nombreEl.classList.remove('marcado');
+          }
+          verificarTodosListos(id);
+        });
+      });
+
+      // Botón EN PREPARACIÓN
+      var btnPrep = card.querySelector('.btn-preparando');
+      if (btnPrep) {
+        btnPrep.addEventListener('click', function () {
+          btnPrep.disabled = true;
+          db.collection('ordenes').doc(id).update({ estado: 'preparando' })
+            .catch(function (err) {
+              console.error('Error actualizando estado:', err);
+              showToast('Error al actualizar orden.', 'error');
+              btnPrep.disabled = false;
+            });
+        });
+      }
+
+      // Botón LISTO
+      var btnListo = card.querySelector('.btn-listo');
+      if (btnListo) {
+        btnListo.addEventListener('click', function () {
+          btnListo.disabled = true;
+          db.collection('ordenes').doc(id).update({ estado: 'listo' })
+            .catch(function (err) {
+              console.error('Error actualizando estado:', err);
+              showToast('Error al actualizar orden.', 'error');
+              btnListo.disabled = false;
+            });
+        });
+      }
+    }
+
+    function verificarTodosListos(orderId) {
+      var card = document.querySelector('.kds-card[data-id="' + orderId + '"]');
+      if (!card) return;
+
+      var checks = card.querySelectorAll('.platillo-check');
+      var todos = checks.length > 0 && Array.from(checks).every(function (cb) { return cb.checked; });
+
+      var btnListo = card.querySelector('.btn-listo');
+      if (btnListo) {
+        if (todos) {
+          btnListo.classList.add('todos-listos');
+        } else {
+          btnListo.classList.remove('todos-listos');
+        }
+      }
+    }
+
+    function actualizarTimers() {
+      Object.keys(ordenesActuales).forEach(function (id) {
+        var data = ordenesActuales[id];
+        var timerEl = document.querySelector('.card-timer[data-order-id="' + id + '"]');
+        if (!timerEl) return;
+        var minutos = calcularMinutos(data.timestamp);
+        timerEl.textContent = minutos + ' min';
+        timerEl.style.color = getColorTimer(minutos);
+      });
+    }
+
+    function escHtml(s) {
+      if (s == null) return '';
+      var d = document.createElement('div');
+      d.textContent = String(s);
+      return d.innerHTML;
+    }
+
+    // ── Navegación de PIN ────────────────────────────────
+    var pinDigits = Array.from(document.querySelectorAll('.pin-digit'));
+
+    pinDigits.forEach(function (input, idx) {
+      input.addEventListener('input', function () {
+        // Forzar 1 solo dígito
+        if (input.value.length > 1) {
+          input.value = input.value.slice(-1);
+        }
+        // Solo dígitos 0-9
+        input.value = input.value.replace(/[^0-9]/g, '');
+
+        if (input.value) {
+          if (idx < pinDigits.length - 1) {
+            pinDigits[idx + 1].focus();
+          } else {
+            // Último dígito: verificar
+            verificarPIN();
+          }
+        }
+      });
+
+      input.addEventListener('keydown', function (e) {
+        if (e.key === 'Backspace' && !input.value && idx > 0) {
+          pinDigits[idx - 1].focus();
+          pinDigits[idx - 1].value = '';
+        }
+        if (e.key === 'Enter') {
+          verificarPIN();
+        }
+      });
+    });
+
+    document.getElementById('btnEntrarCocina').addEventListener('click', verificarPIN);
+
+    document.getElementById('btnSalirCocina').addEventListener('click', function () {
+      if (unsubscribeKDS) unsubscribeKDS();
+      if (intervalTimer) clearInterval(intervalTimer);
+      sessionStorage.removeItem('cocina_auth');
+      location.reload();
+    });
+
+    // ── Init ─────────────────────────────────────────────
+    firebase.auth().signInAnonymously()
+      .then(function () {
+        if (sessionStorage.getItem('cocina_auth') === 'true') {
+          document.getElementById('loginCocina').style.display = 'none';
+          document.getElementById('panelCocina').style.display = 'flex';
+          sesionCocinaActiva = true;
+          iniciarKDS();
+        } else {
+          pinDigits[0].focus();
+        }
+      })
+      .catch(function (error) {
+        console.error('Auth anónima falló:', error);
+        var pinError = document.getElementById('pinError');
+        if (pinError) {
+          pinError.textContent = 'Error de conexión. Recarga la página.';
+          pinError.style.display = 'block';
+        }
+      });
+  </script>
+</body>
+</html>
