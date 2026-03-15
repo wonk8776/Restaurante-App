@@ -3984,3 +3984,16 @@ main.content:has(#section-corte.active) {
     margin-bottom: 8px;
     padding-bottom: 12px;
 }
+
+.reporte-mini-kpis {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 1rem;
+    margin: 1.5rem 0;
+}
+
+@media (max-width: 480px) {
+    .reporte-mini-kpis {
+        grid-template-columns: 1fr;
+    }
+}
