@@ -17,7 +17,7 @@ El documento combina:
 
 ### ¿Qué se construyó?
 
-Una **Progressive Web App (PWA)** de gestión y contabilidad para restaurante con **dos interfaces**: panel de administración y panel de mesero. Backend: **Firebase** (Auth + Firestore). Sin servidor propio. Lógica en **JavaScript vanilla** (IIFE, sin frameworks).
+Una **Progressive Web App (PWA)** de gestión y contabilidad para restaurante con **tres pantallas**: panel de administración (index.html), panel de mesero (mesero.html) y pantalla de cocina KDS (cocina.html, acceso por PIN). Backend: **Firebase** (Auth + Firestore). Sin servidor propio. Lógica en **JavaScript vanilla** (IIFE, sin frameworks).
 
 ### Stack tecnológico
 
@@ -33,7 +33,7 @@ Una **Progressive Web App (PWA)** de gestión y contabilidad para restaurante co
 
 ### Arquitectura en una frase
 
-**Login** (`login.html`) → Firebase Auth → Firestore `usuarios/{uid}` → campo `rol` → redirección a **index.html** (admin) o **mesero.html** (mesero). Admin: SPA con secciones y `onSnapshot` en órdenes, ventas, gastos, menú, usuarios, configuración. Mesero: página independiente que lee menú y `configuracion/mesas`, escribe/actualiza en `ordenes`. Tiempo real en todas las colecciones críticas.
+**Login** (`login.html`) → Firebase Auth → Firestore `usuarios/{uid}` → campo `rol` → redirección a **index.html** (admin) o **mesero.html** (mesero). **Cocina** (`cocina.html`): acceso por PIN (configuracion/restaurante.pinCocina), sin Auth; lee/actualiza `ordenes` en tiempo real. Admin: SPA con secciones (dashboard, órdenes, reportes, reporte semanal, corte de caja, gastos, menú, meseros, cotizaciones, mantenimiento, configuración) y `onSnapshot` en órdenes, ventas, gastos, menú, usuarios, configuración. Mesero: página independiente que lee menú y `configuracion/mesas`, escribe/actualiza en `ordenes`. Tiempo real en todas las colecciones críticas.
 
 ---
 
@@ -54,16 +54,16 @@ Una **Progressive Web App (PWA)** de gestión y contabilidad para restaurante co
 
 ### 2.2 Panel admin (index.html + app.js)
 
-1. **Navegación SPA:** Enlaces en sidebar con `data-section="dashboard"`, `data-section="ordenes"`, etc. Click → `mostrarSeccion(sectionId)`: quita `.active` de todas las secciones, añade `.active` a `#section-{sectionId}` y al enlace con ese `data-section`; actualiza `#headerTitle` con `titulosSeccion[sectionId]`.
-2. **Secciones (IDs de sección):** dashboard, ordenes, pedidos, cotizaciones, menu, meseros, gastos, reportes, reporte-semanal, mantenimiento, configuracion.
+1. **Navegación SPA:** Enlaces en sidebar con `data-section="dashboard"`, `data-section="ordenes"`, etc. Click → `mostrarSeccion(sectionId)`: quita `.active` de todas las secciones, añade `.active` a `#section-{sectionId}` y al enlace con ese `data-section`; actualiza `#headerTitle` con `titulosSeccion[sectionId]`. Grupos colapsables en el menú: **Finanzas** (reportes, reporte-semanal, gastos, corte), **Gestión** (cotizaciones, menu, meseros), **Sistema** (configuracion, mantenimiento).
+2. **Secciones (IDs de sección):** dashboard, ordenes, pedidos, cotizaciones, menu, meseros, gastos, reportes, reporte-semanal, **corte**, mantenimiento, configuracion.
 3. **Tiempo real:** `onSnapshot` en:
    - `ventas` (rango día) y `gastos` (rango día) → dashboard (ventasDia, gastosDia, gananciaNeta);
    - `ordenes` → conteo órdenes activas y listado en `#ordenesBody`;
    - `menu` → listado menú;
    - `usuarios` con `where('rol','==','mesero')` → meseros;
    - `configuracion` doc `mesas` → configuración de mesas.
-4. **Cobro de orden:** Usuario marca orden como pagada → se abre modal método de pago → al confirmar se escribe un doc en `ventas` (timestamp, mesa, total, platillos, meseroNombre, etc.) y la orden se actualiza o se elimina (`ordenes.doc(id).update` o `.delete()`).
-5. **Menú:** CRUD vía `menu` (add, update, delete). **Meseros:** creación con Auth + Firestore `usuarios` (rol `mesero`). **Gastos:** `gastos.add()`. **Reportes:** consultas por rango de fechas sobre `ventas` y `gastos`, exportación HTML para imprimir/PDF. **Reporte semanal:** agregaciones por día, mesero, platillo (lunes–domingo). **Mantenimiento:** búsqueda/eliminación por período en órdenes, cotizaciones, gastos (con confirmación). **Configuración:** `configuracion/mesas` (lista de mesas) y `configuracion/restaurante` (nombre, moneda).
+4. **Cobro de orden:** Usuario marca orden como pagada → se abre modal método de pago con campos opcionales **propina**, **descuento** y **cortesía** (checkbox). Al confirmar se escribe un doc en `ventas` (timestamp, mesa, total, totalFinal, propina, platillos, meseroNombre, metodoPago, etc.) y la orden se actualiza o se elimina (`ordenes.doc(id).update` o `.delete()`).
+5. **Menú:** CRUD vía `menu` (add, update, delete). **Meseros:** creación con Auth + Firestore `usuarios` (rol `mesero`). **Gastos:** `gastos.add()`; **edición y eliminación** de gastos desde la lista (modal editar gasto, `gastoEditandoId`). **Reportes:** filtros rápidos Hoy / Esta Semana / Mes (`setReporteRango`), mini KPIs (ingresos, gastos, balance), tabla de transacciones por fechas y balance neto en pie; exportación/imprimir. **Reporte semanal:** agregaciones por día, mesero, platillo (lunes–domingo), comparativa vs semana anterior, impresión (clase `print-reporte-semanal`). **Corte de caja:** rango datetime-local → resumen (total ventas, por método de pago efectivo/tarjeta/transferencia, propinas, total gastos, ganancia neta, total órdenes), tablas de ventas y gastos, desglose por mesero; botón Imprimir/PDF (clase `printing-corte`). **Mantenimiento:** búsqueda y eliminación por período en órdenes, cotizaciones y gastos (la colección Ventas no se modifica); **Reset operativo** (contraseña admin: elimina órdenes, cotizaciones, gastos, menú, meseros; conserva ventas); **Reset nuclear** (elimina todo incluyendo ventas). **Configuración:** `configuracion/mesas` (lista de mesas: rango desde-hasta o lista manual, máx. 200), `configuracion/restaurante` (nombre, moneda, **pinCocina** 4 dígitos para KDS); al entrar a configuración se llama `cargarConfigMesas()`; el nombre del restaurante se muestra en el sidebar (`#sidebarRestaurantName`).
 
 ### 2.3 Panel mesero (mesero.html)
 
@@ -76,7 +76,12 @@ Una **Progressive Web App (PWA)** de gestión y contabilidad para restaurante co
 
 ### 2.4 Tickets
 
-- **ticket.js** (cargado en index y mesero): `prepararTicket(ordenId)` — lee orden en Firestore, genera HTML de ticket 58 mm, abre ventana y `window.print()`. `enviarWhatsApp(ordenId)` — mismo HTML adaptado para imagen (tabla), html2canvas para PNG y enlace WhatsApp. Cotizaciones: `prepararCotizacion(cotizacionId)`, `enviarWhatsAppCotizacion(cotizacionId)`. En **mesero.html** hay además un contenedor e estilos `@media print` para impresión térmica 80 mm.
+- **ticket.js** (cargado en index y mesero): `prepararTicket(ordenId)` — lee orden en Firestore, genera HTML de ticket 58 mm, abre ventana y `window.print()`. `enviarWhatsApp(ordenId)` — mismo HTML adaptado para imagen (tabla), html2canvas para PNG y enlace WhatsApp. Cotizaciones: `prepararCotizacion(cotizacionId)`, `enviarWhatsAppCotizacion(cotizacionId)`. En **mesero.html** hay además un contenedor y estilos `@media print` para impresión térmica 80 mm.
+
+### 2.5 Cocina (KDS — cocina.html)
+
+1. **Acceso:** Pantalla independiente sin Firebase Auth. Login por **PIN de 4 dígitos** guardado en `configuracion/restaurante.pinCocina` (configurable desde Admin → Configuración → Mantenimiento / PIN Cocina). Elementos: `#loginCocina`, inputs `.pin-digit`, `#btnEntrarCocina`, `#pinError`.
+2. **Contenido:** Tras validar el PIN se muestra el **KDS (Kitchen Display System)**: órdenes en tiempo real desde `ordenes` con estados (pendiente, preparando, listo). La cocina puede cambiar estado de las órdenes. Sin redirección desde login; cocina.html se abre por URL directa (ej. en tablet fija en cocina).
 
 ---
 
@@ -113,10 +118,11 @@ Layout: `.page` (grid dos columnas), `.brand-panel` (izquierda), `.form-panel` (
 | `#modalPlatillo`, `#platilloNombre`, `#platilloPrecio`, `#platilloCategoria`, `#btnGuardarPlatillo` | Modal alta/edición platillo |
 | `#meserosGrid`, `#modalMesero`, `#meseroNombre`, `#meseroEmail`, `#meseroPassword`, `#btnGuardarMesero` | Meseros |
 | `#gastoDescripcion`, `#gastoCategoria`, `#gastoMonto`, `#gastoMetodoPago`, `#btnRegistrarGasto` | Gastos |
-| `#reporteDesde`, `#reporteHasta`, `#btnFiltrarReporte`, `#btnExportarPdf`, `#reportesBody` | Reportes |
-| `#reporteSemanalPeriodo`, `#btnGenerarReporteSemanal`, `#reporteSemanalContenido` | Reporte semanal |
-| Mantenimiento: `#btnBuscarOrdenes`, `#btnEliminarOrdenes`, etc. | Búsqueda y eliminación por período |
-| Configuración: `#restauranteNombre`, `#configRestauranteMensaje`, carga/guardado `configuracion/mesas` | Config restaurante y mesas |
+| `#reporteDesde`, `#reporteHasta`, `#btnFiltrarReporte`, `#reportesBody`, `#reporteMiniIngresos`, `#reporteMiniGastos`, `#reporteMiniBalance`, `#reporteBalanceFoot`, `#reporteBalanceNeto` | Reportes (filtros Hoy/Semana/Mes, mini KPIs, balance) |
+| `#reporteSemanalPeriodo`, `#btnGenerarReporteSemanal`, `#reporteSemanalContenido`, impresión `print-reporte-semanal` | Reporte semanal |
+| Corte: `#corteDesde`, `#corteHasta`, `#btnGenerarCorte`, `#corteResumen`, `#corteVentasBody`, `#corteGastosBody`, `#corteDesgloseMeseros`, `#btnImprimirCorte` (impresión `printing-corte`) | Corte de caja |
+| Mantenimiento: `#btnBuscarOrdenes`, `#btnEliminarOrdenes`, `#btnBuscarCotiz`, `#btnEliminarCotiz`, `#btnBuscarGastos`, `#btnEliminarGastos`, `#resetPassword`, `#btnResetTotal`, `#resetNuclearPassword`, `#btnResetNuclear` | Búsqueda/eliminación por período; Reset operativo y nuclear |
+| Configuración: `#restauranteNombre`, `#restauranteMoneda`, `#sidebarRestaurantName`, `#inputPinCocina`, `#btnGuardarPin`, `#msgPin`; mesas: `#mesasDesde`, `#mesasHasta`, `#mesasManual`, `#mesasConfigActual`, `#mesasPreview`, `#btnGuardarMesas` | Config restaurante (nombre, moneda, PIN cocina) y mesas |
 
 ### Panel mesero (mesero.html)
 
@@ -150,7 +156,7 @@ Menú en modal: productos con `.product-card`, `.btn-add` con `data-id`, `data-n
   Campos: `mesa` (string), `platillos` (array de `{ nombre, precio, cantidad }`), `total` (number), `estado` ('pendiente', 'preparando', 'listo', 'entregado', 'pagada', etc.), `meseroId` (uid), `meseroNombre` (string), `timestamp` (Firestore serverTimestamp). El mesero filtra "mis órdenes" con `where('meseroId','==', user.uid)`.
 
 - **`ventas/{id}`**  
-  Campos: `timestamp`, `total`, `platillos`, `mesa`, `meseroNombre`, y opcionales como `metodoPago`. Se crean al cobrar una orden desde el admin.
+  Campos: `timestamp`, `total`, `totalFinal` (con propina/descuento/cortesía), `platillos`, `mesa`, `meseroNombre`, `metodoPago`, `propina` (opcional). Se crean al cobrar una orden desde el admin (modal con propina, descuento, cortesía).
 
 - **`gastos/{id}`**  
   Campos: `fecha` (timestamp o string), `descripcion`, `categoria`, `monto`, `metodoPago`.
@@ -162,7 +168,7 @@ Menú en modal: productos con `.product-card`, `.btn-add` con `data-id`, `data-n
   Documento único: típicamente un campo (ej. `numeros` o `mesas`) con array de números o nombres de mesa para el grid del mesero.
 
 - **`configuracion/restaurante`**  
-  Documento único: nombre del restaurante, moneda, etc., usado en configuración del admin.
+  Documento único: `nombre`, `moneda`, `pinCocina` (string 4 dígitos para acceso a cocina.html KDS). Usado en configuración del admin y en sidebar (`sidebarRestaurantName`).
 
 ---
 
@@ -170,13 +176,14 @@ Menú en modal: productos con `.product-card`, `.btn-add` con `data-id`, `data-n
 
 ```
 restaurante-pro/
-├── index.html          # Panel admin (SPA): todas las secciones, modales
+├── index.html          # Panel admin (SPA): todas las secciones, modales (incl. método pago con propina/descuento/cortesía)
 ├── login.html          # Login: formulario + botones demo Admin/Mesero
 ├── mesero.html         # Panel mesero: mesas, modal menú, mis órdenes, script inline
+├── cocina.html         # KDS (Kitchen Display): acceso por PIN 4 dígitos, órdenes en tiempo real por estado
 ├── estilos.css         # Sistema dark/dorado global (variables, layout, componentes)
 ├── firebase-config.js  # firebaseConfig + firebase.initializeApp; expone auth, db
 ├── auth.js             # Submit login, checkUserRole(uid), onAuthStateChanged
-├── app.js              # Lógica admin: mostrarSeccion, onSnapshot, CRUD, reportes, cobro
+├── app.js              # Lógica admin: mostrarSeccion, onSnapshot, CRUD, reportes, corte, cobro, gastos edición, mantenimiento, config (mesas, restaurante, PIN cocina)
 ├── toasts.js           # showToast(message, type) — success | error | info
 ├── ticket.js           # prepararTicket, enviarWhatsApp, prepararCotizacion, enviarWhatsAppCotizacion
 ├── sw.js               # Service Worker: precache estáticos, fetch Network First, excluye Firebase
@@ -204,8 +211,9 @@ restaurante-pro/
 | **login.html** | Página de acceso: form email/contraseña, botones demo (Admin y Mesero), layout dos columnas (brand + form). No carga toasts.js. |
 | **auth.js** | Submit → signInWithEmailAndPassword → checkUserRole → get usuarios/{uid} → redirect. onAuthStateChanged protege páginas y redirige al login o por rol. |
 | **index.html** | SPA admin: secciones con id `section-*`, nav por `data-section`, modales (platillo, mesero, método pago). Carga estilos.css, Chart.js, html2canvas, Firebase, auth, toasts, ticket, app. |
-| **app.js** | IIFE. Referencias a todos los IDs del admin; mostrarSeccion; onSnapshot ventas, gastos, ordenes, menu, usuarios (meseros), configuracion; dashboard; CRUD menú y meseros; gastos; reportes por fechas y reporte semanal; mantenimiento; configuración mesas/restaurante; cobro orden (modal → ventas.add, orden update/delete). |
+| **app.js** | IIFE. Referencias a todos los IDs del admin; mostrarSeccion; onSnapshot ventas, gastos, ordenes, menu, usuarios (meseros), configuracion; dashboard; CRUD menú y meseros; gastos (alta y edición/eliminación); reportes por fechas (Hoy/Semana/Mes, mini KPIs) y reporte semanal (imprimir); corte de caja (resumen, ventas, gastos, desglose meseros, imprimir); mantenimiento (limpiar por período órdenes/cotizaciones/gastos, reset operativo, reset nuclear); configuración mesas/restaurante/PIN cocina; cobro orden (modal propina/descuento/cortesía → ventas con totalFinal, orden update/delete). |
 | **mesero.html** | Grid mesas desde configuracion/mesas; modal con menú (menu.onSnapshot), order {}, addItem, updateOrderSummary, btnSend → ordenes.add o update; listener ordenes por meseroId; cards con total + WhatsApp y "Agregar platillo"; toast #toastAdd. Bloque <style> con tema dark/dorado. |
+| **cocina.html** | KDS: pantalla de login por PIN (4 dígitos, comparado con configuracion/restaurante.pinCocina); tras validar PIN, vista de órdenes en tiempo real (Firestore ordenes) con estados; sin Firebase Auth. Estilos inline; script inline para PIN y listeners. |
 | **estilos.css** | :root (colores, tipografía, sombras, radios). Layout sidebar + content. Componentes: botones, tablas, modales, formularios. Usado por index, login, mesero. |
 | **toasts.js** | showToast(msg, type). Crea contenedor si no existe; fallback a alert. |
 | **ticket.js** | Lee orden/cotización de Firestore, genera HTML ticket (58 mm o formato WhatsApp), print o html2canvas. |
@@ -230,9 +238,11 @@ Control de **ventas, gastos y operación** del restaurante desde navegador o PWA
 
 ### Funciones principales
 
-**Admin:** Dashboard (ventas/gastos del día, ganancia, órdenes activas), gráfica 7 días, órdenes en vivo (cambiar estado, cobrar, imprimir ticket), menú (CRUD), meseros (crear/listar/eliminar), gastos, reportes por fechas y exportar/PDF, reporte semanal, pedidos y cotizaciones, configuración (mesas, restaurante), mantenimiento (eliminar por período con confirmación).
+**Admin:** Dashboard (ventas/gastos del día, ganancia, órdenes activas), gráfica 7 días, órdenes en vivo (cambiar estado, cobrar con propina/descuento/cortesía, imprimir ticket), menú (CRUD), meseros (crear/listar/eliminar), gastos (registrar, editar, eliminar), reportes por fechas (Hoy/Semana/Mes, mini KPIs, balance) y exportar/imprimir, reporte semanal (comparativa vs semana anterior, imprimir), **corte de caja** (rango de fechas, resumen por método de pago, ventas/gastos/desglose meseros, imprimir/PDF), pedidos y cotizaciones, configuración (nombre restaurante, moneda, **PIN cocina** para KDS, mesas), mantenimiento (limpiar órdenes/cotizaciones/gastos por período, reset operativo conservando ventas, reset nuclear).
 
 **Mesero:** Login → panel mesero; ver mesas y elegir una; abrir modal, agregar ítems del menú, enviar orden (o agregar a una existente); ver "Mis órdenes" con total y WhatsApp en la misma fila; agregar platillos, cambiar cantidades; toast al agregar ítem; imprimir ticket / 80 mm si está disponible.
+
+**Cocina (KDS):** Acceso por PIN de 4 dígitos (configurado en Admin); pantalla con órdenes en tiempo real y cambio de estado (pendiente/preparando/listo). Sin login de usuario; se usa por URL directa (p. ej. tablet en cocina).
 
 ### Credenciales demo (login)
 
@@ -245,10 +255,10 @@ Control de **ventas, gastos y operación** del restaurante desde navegador o PWA
 
 | Pregunta | Respuesta técnica | Respuesta cliente |
 |----------|-------------------|-------------------|
-| **¿Qué es?** | PWA con Firebase (Auth + Firestore), dos frontends (admin + mesero), Service Worker, toasts, reportes, tickets 58 mm y 80 mm (mesero), diseño dark/dorado, marca Familia González. | App para ventas, gastos y pedidos del restaurante desde navegador o app instalada. |
-| **¿Para qué sirve?** | Centralizar operación y contabilidad en Firestore en tiempo real, con roles admin/mesero y sin backend propio. | Control de caja, pedidos por mesa, reportes e impresión de tickets. |
-| **¿Cómo funciona?** | Login → rol en Firestore → redirect; onSnapshot en colecciones; toasts; reportes por fechas; PWA Network First. | Entrar con usuario/contraseña o demo; admin gestiona todo; mesero toma pedidos y ve sus órdenes; al cobrar se registra venta y se puede imprimir. |
+| **¿Qué es?** | PWA con Firebase (Auth + Firestore), tres pantallas (admin, mesero, cocina KDS por PIN), Service Worker, toasts, reportes, corte de caja, tickets 58 mm y 80 mm (mesero), diseño dark/dorado, marca Familia González. | App para ventas, gastos, pedidos y cocina del restaurante desde navegador o app instalada. |
+| **¿Para qué sirve?** | Centralizar operación y contabilidad en Firestore en tiempo real, con roles admin/mesero y KDS sin Auth; cobro con propina/descuento/cortesía; reportes y corte por período; mantenimiento y resets. | Control de caja, pedidos por mesa, pantalla de cocina, reportes, corte de caja e impresión de tickets. |
+| **¿Cómo funciona?** | Login → rol en Firestore → redirect admin/mesero; cocina por PIN; onSnapshot en colecciones; reportes y corte por fechas; PWA Network First. | Entrar con usuario/contraseña o demo; admin gestiona todo (incl. PIN cocina y corte); mesero toma pedidos; cocina ve órdenes por PIN; al cobrar se registra venta (con propina/descuento si aplica) y se puede imprimir. |
 
 ---
 
-*Documento de contexto del proyecto Restaurante Pro — Familia González — PWA de contabilidad. Actualizado para servir como referencia completa para IA (p. ej. Cursor) y para desarrolladores. Última actualización: marzo 2026.*
+*Documento de contexto del proyecto Restaurante Pro — Familia González — PWA de contabilidad. Actualizado para servir como referencia completa para IA (p. ej. Cursor) y para desarrolladores. Incluye: Corte de caja, Cocina KDS (cocina.html + PIN), edición de gastos, reportes con filtros rápidos y mini KPIs, configuración PIN cocina y mesas, mantenimiento (reset operativo y nuclear). Última actualización: marzo 2026.*
