@@ -126,6 +126,19 @@
             border-color: rgba(255,255,255,0.5) !important;
         }
         .header-right { display: flex; align-items: center; gap: 1rem; }
+        /* Escritorio: logo-block en fila, restaurante centrado absolutamente */
+        .logo-block {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            flex-shrink: 0;
+        }
+        #meseroRestaurantName {
+            position: absolute;
+            left: 50%;
+            transform: translateX(-50%);
+            pointer-events: none;
+        }
         main {
             background: var(--color-bg);
             padding: 20px;
@@ -538,7 +551,7 @@
             padding: 1rem 0;
         }
 
-        /* Header móvil: logo apilado con nombre restaurante; logout a la derecha */
+        /* Header móvil: logo+restaurante apilados a la izquierda, mesero+logout a la derecha */
         @media (max-width: 768px) {
             header {
                 flex-wrap: nowrap;
@@ -551,16 +564,18 @@
                 gap: 0.5rem;
             }
 
-            .restiq-logo {
+            .logo-block {
                 display: flex;
                 flex-direction: column;
                 align-items: flex-start;
                 gap: 1px;
                 flex-shrink: 0;
+                min-width: 0;
             }
 
-            .restiq-logo > span:first-of-type {
+            .restiq-logo {
                 display: flex;
+                flex-direction: row;
                 align-items: center;
                 gap: 6px;
                 font-size: 13px;
@@ -574,15 +589,16 @@
                 white-space: nowrap;
                 overflow: hidden;
                 text-overflow: ellipsis;
-                max-width: 140px;
-                padding-left: 34px;
+                max-width: 150px;
+                margin-left: 34px;
+                margin-top: 1px;
             }
 
             .header-right {
                 display: flex;
                 align-items: center;
                 gap: 0.5rem;
-                margin-left: auto;
+                flex-shrink: 0;
             }
 
             .waiter-name {
@@ -951,16 +967,18 @@
 <body>
 
     <header>
-        <span class="restiq-logo">
-            <svg width="28" height="28" viewBox="0 0 28 28" fill="none" xmlns="http://www.w3.org/2000/svg">
-                <rect width="28" height="28" rx="7" fill="#2563EB"/>
-                <path d="M7 8h8.5a3.5 3.5 0 0 1 0 7H7V8z" fill="white"/>
-                <path d="M7 15h5l5 5H7v-5z" fill="white" opacity="0.7"/>
-                <rect x="18" y="15" width="3" height="5" rx="1.5" fill="white" opacity="0.9"/>
-            </svg>
-            <span>RESTIQ</span>
-        </span>
-        <div id="meseroRestaurantName" class="mesero-restaurant-name"></div>
+        <div class="logo-block">
+            <span class="restiq-logo">
+                <svg width="28" height="28" viewBox="0 0 28 28" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <rect width="28" height="28" rx="7" fill="#2563EB"/>
+                    <path d="M7 8h8.5a3.5 3.5 0 0 1 0 7H7V8z" fill="white"/>
+                    <path d="M7 15h5l5 5H7v-5z" fill="white" opacity="0.7"/>
+                    <rect x="18" y="15" width="3" height="5" rx="1.5" fill="white" opacity="0.9"/>
+                </svg>
+                <span>RESTIQ</span>
+            </span>
+            <div id="meseroRestaurantName" class="mesero-restaurant-name"></div>
+        </div>
         <div class="header-right">
             <span class="waiter-name">Mesero: <strong id="waiterName">---</strong></span>
             <button type="button" class="btn-logout" id="btnLogout">Cerrar sesión</button>
