@@ -87,14 +87,14 @@
         /* Header mesero */
         header {
             background: var(--color-sidebar) !important;
-            height: 56px;
+            min-height: 56px;
             padding: 0 20px !important;
             border-bottom: none !important;
             box-shadow: none !important;
             display: flex;
             align-items: center;
             justify-content: space-between;
-            flex-wrap: wrap;
+            flex-wrap: nowrap;
             gap: 0;
             position: sticky;
             top: 0;
@@ -126,18 +126,17 @@
             border-color: rgba(255,255,255,0.5) !important;
         }
         .header-right { display: flex; align-items: center; gap: 1rem; }
-        /* Escritorio: logo-block en fila, restaurante centrado absolutamente */
+        /* Escritorio: logo-block en columna (logo arriba, restaurante abajo) */
         .logo-block {
             display: flex;
-            align-items: center;
-            gap: 8px;
+            flex-direction: column;
+            align-items: flex-start;
+            gap: 2px;
             flex-shrink: 0;
         }
         #meseroRestaurantName {
-            position: absolute;
-            left: 50%;
-            transform: translateX(-50%);
-            pointer-events: none;
+            font-size: 12px;
+            margin-left: 36px;
         }
         main {
             background: var(--color-bg);
